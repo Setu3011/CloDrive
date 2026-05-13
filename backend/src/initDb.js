@@ -1,7 +1,7 @@
-const pool = require('./db')
+const db = require('./db')
 
 async function initDb() {
-  await pool.query(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       username VARCHAR(100) NOT NULL,
@@ -11,7 +11,7 @@ async function initDb() {
     )
   `)
 
-  await pool.query(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS profiles (
       id SERIAL PRIMARY KEY,
       user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -21,6 +21,8 @@ async function initDb() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `)
+
+  console.log('Database tables initialized successfully')
 }
 
 module.exports = initDb
