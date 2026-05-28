@@ -1,170 +1,894 @@
-import { Link, Route, Routes, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import axios from 'axios'
+import { Link, Route, Routes, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
-const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+import {
+  FaPlus,
+  FaFileAlt,
+  FaImage,
+  FaFilePdf,
+  FaTrash,
+  FaDownload,
+  FaSearch,
+} from "react-icons/fa";
+
+const API =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:5000";
+
+/* ================= LAYOUT ================= */
 
 function Layout({ children }) {
   return (
     <div className="page-bg">
+
       <div className="orb orb-one" />
       <div className="orb orb-two" />
-      <div className="container">{children}</div>
+
+      <div className="container">
+        {children}
+      </div>
+
     </div>
-  )
+  );
 }
+
+/* ================= HOME ================= */
 
 function Home() {
   return (
     <Layout>
+
       <section className="home-hero glass">
-        <div className="logo-wrap" aria-label="CloDrive logo">
-          <span className="logo-mark logo-big">CD</span>
-          <h1 className="logo-title">CloDrive</h1>
+
+        <div className="logo-wrap">
+
+          <span className="logo-mark logo-big">
+            CD
+          </span>
+
+          <h1 className="logo-title">
+            CloDrive
+          </h1>
+
         </div>
 
-        <p className="badge">Secure • Fast • Beautiful</p>
-        <h2 className="hero-title">Store and access your files anywhere</h2>
+        <p className="badge">
+          Secure • Fast • Beautiful
+        </p>
+
+        <h2 className="hero-title">
+          Store and access your files anywhere
+        </h2>
+
         <p className="hero-text">
-          CloDrive is a modern cloud-style uploader with authentication,
-          smooth interactions, and a clean dashboard experience.
+          Modern cloud storage dashboard
+          with upload, sharing, starred
+          files, trash, and responsive UI.
         </p>
 
         <div className="hero-actions">
-          <Link to="/signup" className="btn btn-primary">Create Account</Link>
-          <Link to="/login" className="btn btn-secondary">Login</Link>
+
+          <Link
+            to="/signup"
+            className="btn btn-primary"
+          >
+            Create Account
+          </Link>
+
+          <Link
+            to="/login"
+            className="btn btn-secondary"
+          >
+            Login
+          </Link>
+
         </div>
 
-        <div className="slideshow" aria-label="CloDrive feature slideshow">
-          <div className="slide-track">
-            <div className="slide-item">🔒 End-to-end secure uploads</div>
-            <div className="slide-item">⚡ Fast file transfer</div>
-            <div className="slide-item">📁 Smart dashboard controls</div>
-            <div className="slide-item">🎨 Smooth transitions</div>
-            <div className="slide-item">📱 Fully responsive layout</div>
-            <div className="slide-item">☁️ Cloud-ready architecture</div>
-          </div>
-        </div>
       </section>
 
-      <section className="feature-grid">
-        <article className="feature-card glass">
-          <h3>Upload with confidence</h3>
-          <p>Authenticated access and secure storage flow built for reliability.</p>
-        </article>
-        <article className="feature-card glass">
-          <h3>Elegant user experience</h3>
-          <p>Polished animations, gradients, and hover effects across the app.</p>
-        </article>
-        <article className="feature-card glass">
-          <h3>Responsive by design</h3>
-          <p>Looks great on desktop, tablet, and mobile without layout breaks.</p>
-        </article>
-      </section>
     </Layout>
-  )
+  );
 }
+
+/* ================= SIGNUP ================= */
 
 function Signup() {
-  const navigate = useNavigate()
-  const [form, setForm] = useState({ username: '', email: '', password: '' })
+
+  const navigate = useNavigate();
+
+  const [form, setForm] =
+    useState({
+      username: "",
+      email: "",
+      password: "",
+    });
 
   const submit = async (e) => {
-    e.preventDefault()
-    await axios.post(`${API}/api/auth/signup`, form)
-    navigate('/login')
-  }
+
+    e.preventDefault();
+
+    try {
+
+      await axios.post(
+        `${API}/api/auth/signup`,
+        form
+      );
+
+      navigate("/login");
+
+    } catch (err) {
+
+      console.log(err);
+
+      alert("Signup failed");
+    }
+  };
 
   return (
     <Layout>
+
       <section className="card glass">
-        <h2>Create account</h2>
-        <form onSubmit={submit} className="form">
-          <input placeholder="Username" onChange={(e) => setForm({ ...form, username: e.target.value })} required />
-          <input placeholder="Email" type="email" onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-          <input placeholder="Password" type="password" onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-          <button className="btn btn-primary">Signup</button>
+
+        <h2>Create Account</h2>
+
+        <form
+          onSubmit={submit}
+          className="form"
+        >
+
+          <input
+            placeholder="Username"
+            required
+            onChange={(e) =>
+              setForm({
+                ...form,
+                username:
+                  e.target.value,
+              })
+            }
+          />
+
+          <input
+            type="email"
+            placeholder="Email"
+            required
+            onChange={(e) =>
+              setForm({
+                ...form,
+                email:
+                  e.target.value,
+              })
+            }
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            required
+            onChange={(e) =>
+              setForm({
+                ...form,
+                password:
+                  e.target.value,
+              })
+            }
+          />
+
+          <button className="btn btn-primary">
+            Signup
+          </button>
+
         </form>
+
       </section>
+
     </Layout>
-  )
+  );
 }
+
+/* ================= LOGIN ================= */
 
 function Login() {
-  const navigate = useNavigate()
-  const [form, setForm] = useState({ email: '', password: '' })
+
+  const navigate = useNavigate();
+
+  const [form, setForm] =
+    useState({
+      email: "",
+      password: "",
+    });
 
   const submit = async (e) => {
-    e.preventDefault()
-    const res = await axios.post(`${API}/api/auth/login`, form)
-    localStorage.setItem('token', res.data.token)
-    navigate('/dashboard')
-  }
+
+    e.preventDefault();
+
+    try {
+
+      const res = await axios.post(
+        `${API}/api/auth/login`,
+        form
+      );
+
+      localStorage.setItem(
+        "token",
+        res.data.token
+      );
+
+      navigate("/dashboard");
+
+    } catch (err) {
+
+      console.log(err);
+
+      alert("Login failed");
+    }
+  };
 
   return (
     <Layout>
+
       <section className="card glass">
-        <h2>Welcome back</h2>
-        <form onSubmit={submit} className="form">
-          <input placeholder="Email" type="email" onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-          <input placeholder="Password" type="password" onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-          <button className="btn btn-primary">Login</button>
+
+        <h2>Welcome Back</h2>
+
+        <form
+          onSubmit={submit}
+          className="form"
+        >
+
+          <input
+            type="email"
+            placeholder="Email"
+            required
+            onChange={(e) =>
+              setForm({
+                ...form,
+                email:
+                  e.target.value,
+              })
+            }
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            required
+            onChange={(e) =>
+              setForm({
+                ...form,
+                password:
+                  e.target.value,
+              })
+            }
+          />
+
+          <button className="btn btn-primary">
+            Login
+          </button>
+
         </form>
+
       </section>
+
     </Layout>
-  )
+  );
 }
+
+/* ================= DASHBOARD ================= */
 
 function Dashboard() {
-  const [file, setFile] = useState(null)
-  const [items, setItems] = useState([])
 
-  const load = async () => {
-    const token = localStorage.getItem('token')
-    const res = await axios.get(`${API}/api/files`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    setItems(res.data.files)
-  }
+  const [items, setItems] =
+    useState([]);
 
-  const upload = async () => {
-    const token = localStorage.getItem('token')
-    const data = new FormData()
-    data.append('file', file)
-    await axios.post(`${API}/api/files/upload`, data, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    await load()
-  }
+  const [search, setSearch] =
+    useState("");
+
+  const [activePage, setActivePage] =
+    useState("files");
+
+  const token =
+    localStorage.getItem("token");
+
+  /* ================= LOAD PAGE ================= */
+
+  const loadPage = async (page) => {
+
+    try {
+
+      let endpoint = "/api/files";
+
+      if (page === "starred") {
+        endpoint =
+          "/api/files/starred";
+      }
+
+      if (page === "recent") {
+        endpoint =
+          "/api/files/recent";
+      }
+
+      if (page === "trash") {
+        endpoint =
+          "/api/files/trash";
+      }
+
+      const res = await axios.get(
+        `${API}${endpoint}`,
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+      setItems(res.data.files);
+
+    } catch (err) {
+
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    loadPage("files");
+  }, []);
+
+  /* ================= UPLOAD ================= */
+
+  const upload = async (selectedFile) => {
+
+    try {
+
+      if (!selectedFile) return;
+
+      const data = new FormData();
+
+      data.append(
+        "file",
+        selectedFile
+      );
+
+      await axios.post(
+        `${API}/api/files/upload`,
+        data,
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+            "Content-Type":
+              "multipart/form-data",
+          },
+        }
+      );
+
+      loadPage(activePage);
+
+    } catch (err) {
+
+      console.log(err);
+
+      alert("Upload failed");
+    }
+  };
+
+  /* ================= ICON ================= */
+
+  const getIcon = (name) => {
+
+    if (name.endsWith(".pdf")) {
+      return <FaFilePdf />;
+    }
+
+    if (
+      name.endsWith(".png") ||
+      name.endsWith(".jpg") ||
+      name.endsWith(".jpeg")
+    ) {
+      return <FaImage />;
+    }
+
+    return <FaFileAlt />;
+  };
+
+  /* ================= SEARCH ================= */
+
+  const filteredFiles = items.filter(
+    (f) =>
+      f.originalName
+        .toLowerCase()
+        .includes(
+          search.toLowerCase()
+        )
+  );
+
+  /* ================= RENDER FILES ================= */
+
+  const renderFiles = () => {
+
+    return filteredFiles.map((f) => (
+
+      <div
+        className="file-card"
+        key={f.id}
+      >
+
+        <div className="file-top">
+
+          <div className="file-icon">
+            {getIcon(
+              f.originalName
+            )}
+          </div>
+
+          <div className="file-type">
+            FILE
+          </div>
+
+        </div>
+
+        <h4>{f.originalName}</h4>
+
+        <div className="file-actions">
+
+          {/* VIEW */}
+
+          <a
+            href={`${API}${f.url}`}
+            target="_blank"
+            rel="noreferrer"
+            title="View"
+          >
+            👁
+          </a>
+
+          {/* DOWNLOAD */}
+
+          <a
+            href={`${API}${f.url}`}
+            download
+            title="Download"
+          >
+            <FaDownload />
+          </a>
+
+          {/* STAR */}
+
+          <button
+            title="Star"
+            onClick={async () => {
+
+              try {
+
+                await axios.put(
+                  `${API}/api/files/star/${f.id}`,
+                  {},
+                  {
+                    headers: {
+                      Authorization:
+                        `Bearer ${token}`,
+                    },
+                  }
+                );
+
+                loadPage(activePage);
+
+              } catch (err) {
+
+                console.log(err);
+              }
+            }}
+          >
+            ⭐
+          </button>
+
+          {/* SHARE */}
+
+          <button
+            title="Share"
+            onClick={() => {
+
+              navigator.clipboard.writeText(
+                `${API}${f.url}`
+              );
+
+              alert(
+                "Share link copied!"
+              );
+            }}
+          >
+            🔗
+          </button>
+
+          {/* DELETE */}
+
+          <button
+            title="Delete"
+            onClick={async () => {
+
+              try {
+
+                await axios.delete(
+                  `${API}/api/files/${f.id}`,
+                  {
+                    headers: {
+                      Authorization:
+                        `Bearer ${token}`,
+                    },
+                  }
+                );
+
+                loadPage(activePage);
+
+              } catch (err) {
+
+                console.log(err);
+
+                alert(
+                  "Delete failed"
+                );
+              }
+            }}
+          >
+            <FaTrash />
+          </button>
+
+        </div>
+
+      </div>
+    ));
+  };
 
   return (
     <Layout>
-      <section className="card glass">
-        <h2>Your Dashboard</h2>
-        <div className="row">
-          <input className="file-input" type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          <button className="btn btn-primary upload-btn" onClick={upload} disabled={!file}>Upload</button>
-          <button className="btn btn-secondary" onClick={load}>Refresh</button>
-        </div>
-        <ul className="file-list">
-          {items.map((f) => (
-            <li key={f.id}>
-              <a href={`${API}${f.url}`} target="_blank" rel="noreferrer">{f.originalName}</a>
-            </li>
-          ))}
-        </ul>
-      </section>
+
+      <div className="dashboard-layout">
+
+        {/* SIDEBAR */}
+
+        <aside className="sidebar glass">
+
+          <div>
+
+            <div className="sidebar-logo">
+
+              <span className="logo-mark">
+                CD
+              </span>
+
+              <h2>CloDrive</h2>
+
+            </div>
+
+            <div className="sidebar-menu">
+
+              <button
+                className={
+                  activePage === "files"
+                    ? "active"
+                    : ""
+                }
+                onClick={() => {
+                  setActivePage("files");
+                  loadPage("files");
+                }}
+              >
+                📁 My Files
+              </button>
+
+              <button
+                className={
+                  activePage === "starred"
+                    ? "active"
+                    : ""
+                }
+                onClick={() => {
+                  setActivePage(
+                    "starred"
+                  );
+
+                  loadPage(
+                    "starred"
+                  );
+                }}
+              >
+                ⭐ Starred
+              </button>
+
+              <button
+                className={
+                  activePage === "recent"
+                    ? "active"
+                    : ""
+                }
+                onClick={() => {
+                  setActivePage(
+                    "recent"
+                  );
+
+                  loadPage(
+                    "recent"
+                  );
+                }}
+              >
+                🕒 Recent
+              </button>
+
+              <button
+                className={
+                  activePage === "trash"
+                    ? "active"
+                    : ""
+                }
+                onClick={() => {
+                  setActivePage(
+                    "trash"
+                  );
+
+                  loadPage(
+                    "trash"
+                  );
+                }}
+              >
+                🗑 Trash
+              </button>
+
+              <button
+                className={
+                  activePage === "settings"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setActivePage(
+                    "settings"
+                  )
+                }
+              >
+                ⚙ Settings
+              </button>
+
+            </div>
+
+          </div>
+
+          {/* STORAGE */}
+
+          <div className="storage-box">
+
+            <p>Storage Used</p>
+
+            <div className="storage-bar">
+
+              <div className="storage-fill"></div>
+
+            </div>
+
+            <span>
+              0.1GB of 15GB
+            </span>
+
+          </div>
+
+        </aside>
+
+        {/* MAIN */}
+
+        <main className="dashboard-main">
+
+          {/* TOPBAR */}
+
+          <div className="topbar">
+
+            <h2>My Drive</h2>
+
+            <div className="search-box">
+
+              <FaSearch />
+
+              <input
+                type="text"
+                placeholder="Search files..."
+                onChange={(e) =>
+                  setSearch(
+                    e.target.value
+                  )
+                }
+              />
+
+            </div>
+
+          </div>
+
+          {/* SETTINGS */}
+
+          {activePage ===
+            "settings" && (
+
+            <div className="page-card glass">
+
+              <h1>
+                ⚙ Settings
+              </h1>
+
+              <p>
+                Manage your dashboard
+                settings here.
+              </p>
+
+            </div>
+          )}
+
+          {/* FILES */}
+
+          {activePage === "files" && (
+
+            filteredFiles.length === 0 ? (
+
+              <div className="empty-state glass">
+
+                <div className="empty-icon">
+                  ☁
+                </div>
+
+                <h3>
+                  No Files Uploaded
+                </h3>
+
+                <p>
+                  Upload files using
+                  the + button
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="file-grid">
+                {renderFiles()}
+              </div>
+
+            )
+          )}
+
+          {/* STARRED */}
+
+          {activePage ===
+            "starred" && (
+
+            filteredFiles.length === 0 ? (
+
+              <div className="page-card glass">
+
+                <h1>
+                  ⭐ Starred Files
+                </h1>
+
+                <p>
+                  No starred files yet.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="file-grid">
+                {renderFiles()}
+              </div>
+
+            )
+          )}
+
+          {/* RECENT */}
+
+          {activePage ===
+            "recent" && (
+
+            filteredFiles.length === 0 ? (
+
+              <div className="page-card glass">
+
+                <h1>
+                  🕒 Recent Files
+                </h1>
+
+                <p>
+                  No recent files found.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="file-grid">
+                {renderFiles()}
+              </div>
+
+            )
+          )}
+
+          {/* TRASH */}
+
+          {activePage ===
+            "trash" && (
+
+            filteredFiles.length === 0 ? (
+
+              <div className="page-card glass">
+
+                <h1>
+                  🗑 Trash
+                </h1>
+
+                <p>
+                  Trash is empty.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="file-grid">
+                {renderFiles()}
+              </div>
+
+            )
+          )}
+
+          {/* FLOATING UPLOAD */}
+
+          <label className="floating-upload">
+
+            <FaPlus />
+
+            <input
+              type="file"
+              hidden
+              onChange={(e) => {
+                upload(
+                  e.target.files[0]
+                );
+              }}
+            />
+
+          </label>
+
+        </main>
+
+      </div>
+
     </Layout>
-  )
+  );
 }
+
+/* ================= APP ================= */
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/dashboard" element={<Dashboard />} />
+
+      <Route
+        path="/"
+        element={<Home />}
+      />
+
+      <Route
+        path="/signup"
+        element={<Signup />}
+      />
+
+      <Route
+        path="/login"
+        element={<Login />}
+      />
+
+      <Route
+        path="/dashboard"
+        element={<Dashboard />}
+      />
+
     </Routes>
-  )
+  );
 }

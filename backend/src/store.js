@@ -1,48 +1,142 @@
-// const bcrypt = require('bcryptjs')
+const files = [];
 
-// const users = []
-// const files = []
-// let userId = 1
-// let fileId = 1
+let fileId = 1;
 
-// async function createUser({ username, email, password }) {
-//   const existing = users.find((u) => u.email === email)
-//   if (existing) {
-//     throw new Error('User already exists')
-//   }
+/* ================= ADD FILE ================= */
 
-//   const hashed = await bcrypt.hash(password, 10)
-//   const user = { id: userId++, username, email, password: hashed }
-//   users.push(user)
-//   return { id: user.id, username: user.username, email: user.email }
-// }
+function addFile({
+  ownerId,
+  originalName,
+  storedName,
+  size,
+}) {
+  const file = {
+    id: fileId++,
 
-// function findUserByEmail(email) {
-//   return users.find((u) => u.email === email) || null
-// }
+    ownerId,
 
-// function addFile({ ownerId, originalName, storedName, size }) {
-//   const file = {
-//     id: fileId++,
-//     ownerId,
-//     originalName,
-//     storedName,
-//     size,
-//     url: `/uploads/${storedName}`,
-//     createdAt: new Date().toISOString()
-//   }
-//   files.push(file)
-//   return file
-// }
+    originalName,
 
-// function listFilesByOwner(ownerId) {
-//   return files.filter((f) => f.ownerId === ownerId)
-// }
+    storedName,
 
-// module.exports = {
-//   createUser,
-//   findUserByEmail,
-//   addFile,
-//   listFilesByOwner
-// }
+    size,
 
+    starred: false,
+
+    deleted: false,
+
+    url: `/uploads/${storedName}`,
+
+    createdAt: new Date().toISOString(),
+  };
+
+  files.push(file);
+
+  return file;
+}
+
+/* ================= LIST FILES ================= */
+
+function listFilesByOwner(ownerId) {
+  return files.filter(
+    (f) =>
+      f.ownerId === ownerId &&
+      !f.deleted
+  );
+}
+
+/* ================= RECENT FILES ================= */
+
+function listRecentFiles(ownerId) {
+  return files
+    .filter(
+      (f) =>
+        f.ownerId === ownerId &&
+        !f.deleted
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt) -
+        new Date(a.createdAt)
+    );
+}
+
+/* ================= STARRED FILES ================= */
+
+function listStarredFiles(ownerId) {
+  return files.filter(
+    (f) =>
+      f.ownerId === ownerId &&
+      f.starred &&
+      !f.deleted
+  );
+}
+
+/* ================= TRASH ================= */
+
+function listTrashFiles(ownerId) {
+  return files.filter(
+    (f) =>
+      f.ownerId === ownerId &&
+      f.deleted
+  );
+}
+
+/* ================= TOGGLE STAR ================= */
+
+function toggleStar(fileId, ownerId) {
+  const file = files.find(
+    (f) =>
+      f.id === parseInt(fileId) &&
+      f.ownerId === ownerId
+  );
+
+  if (!file) return null;
+
+  file.starred = !file.starred;
+
+  return file;
+}
+
+/* ================= DELETE ================= */
+
+function deleteFile(fileId, ownerId) {
+  const file = files.find(
+    (f) =>
+      f.id === parseInt(fileId) &&
+      f.ownerId === ownerId
+  );
+
+  if (!file) return null;
+
+  file.deleted = true;
+
+  return file;
+}
+
+/* ================= RESTORE ================= */
+
+function restoreFile(fileId, ownerId) {
+  const file = files.find(
+    (f) =>
+      f.id === parseInt(fileId) &&
+      f.ownerId === ownerId
+  );
+
+  if (!file) return null;
+
+  file.deleted = false;
+
+  return file;
+}
+
+module.exports = {
+  addFile,
+  listFilesByOwner,
+  listRecentFiles,
+  listStarredFiles,
+  listTrashFiles,
+  toggleStar,
+  deleteFile,
+  restoreFile,
+};
