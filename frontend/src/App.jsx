@@ -1,7 +1,7 @@
 import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
-
+import Profile from "./profile";
 import {
   FaPlus,
   FaFileAlt,
@@ -104,16 +104,26 @@ function Signup() {
       password: "",
     });
 
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
+
   const submit = async (e) => {
 
     e.preventDefault();
 
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
     try {
 
-      await axios.post(
-        `${API}/api/auth/signup`,
-        form
-      );
+    const res = await axios.post(
+  `${API}/api/auth/signup`,
+  form
+);
+
+console.log("Signup Success:", res.data);
+
 
       navigate("/login");
 
@@ -121,7 +131,12 @@ function Signup() {
 
       console.log(err);
 
-      alert("Signup failed");
+      alert(
+        err.response?.data?.message ||
+          "Signup failed"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -140,6 +155,7 @@ function Signup() {
           <input
             placeholder="Username"
             required
+            disabled={isSubmitting}
             onChange={(e) =>
               setForm({
                 ...form,
@@ -153,6 +169,7 @@ function Signup() {
             type="email"
             placeholder="Email"
             required
+            disabled={isSubmitting}
             onChange={(e) =>
               setForm({
                 ...form,
@@ -166,6 +183,7 @@ function Signup() {
             type="password"
             placeholder="Password"
             required
+            disabled={isSubmitting}
             onChange={(e) =>
               setForm({
                 ...form,
@@ -175,8 +193,18 @@ function Signup() {
             }
           />
 
-          <button className="btn btn-primary">
-            Signup
+          <button
+            className="btn btn-primary btn-loading-wrap"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <span className="btn-spinner" />
+                Creating...
+              </>
+            ) : (
+              "Signup"
+            )}
           </button>
 
         </form>
@@ -199,9 +227,16 @@ function Login() {
       password: "",
     });
 
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
+
   const submit = async (e) => {
 
     e.preventDefault();
+
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
 
     try {
 
@@ -210,10 +245,21 @@ function Login() {
         form
       );
 
-      localStorage.setItem(
-        "token",
-        res.data.token
-      );
+     
+    localStorage.setItem(
+      "user",
+      JSON.stringify(res.data.user)
+    );
+
+    localStorage.setItem(
+      "token",
+      res.data.token
+    );
+
+    localStorage.setItem(
+  "userId",
+  res.data.user.id
+);
 
       navigate("/dashboard");
 
@@ -221,7 +267,12 @@ function Login() {
 
       console.log(err);
 
-      alert("Login failed");
+      alert(
+        err.response?.data?.message ||
+          "Login failed"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -241,6 +292,7 @@ function Login() {
             type="email"
             placeholder="Email"
             required
+            disabled={isSubmitting}
             onChange={(e) =>
               setForm({
                 ...form,
@@ -254,6 +306,7 @@ function Login() {
             type="password"
             placeholder="Password"
             required
+            disabled={isSubmitting}
             onChange={(e) =>
               setForm({
                 ...form,
@@ -263,8 +316,18 @@ function Login() {
             }
           />
 
-          <button className="btn btn-primary">
-            Login
+          <button
+            className="btn btn-primary btn-loading-wrap"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <span className="btn-spinner" />
+                Logging in...
+              </>
+            ) : (
+              "Login"
+            )}
           </button>
 
         </form>
@@ -279,8 +342,13 @@ function Login() {
 
 function Dashboard() {
 
+  const navigate = useNavigate();
+
   const [items, setItems] =
     useState([]);
+
+  const [user, setUser] =
+    useState(null);
 
   const [search, setSearch] =
     useState("");
@@ -290,6 +358,18 @@ function Dashboard() {
 
   const token =
     localStorage.getItem("token");
+
+  const profileInitial =
+    (user?.username || user?.email || "U")
+      .charAt(0)
+      .toUpperCase();
+
+  const profileName =
+    user?.username || "Profile";
+
+  const profileEmail =
+    user?.email || "";
+    
 
   /* ================= LOAD PAGE ================= */
 
@@ -333,23 +413,50 @@ function Dashboard() {
   };
 
   useEffect(() => {
+    const storedUser =
+      localStorage.getItem("user");
+
+    if (storedUser) {
+      setUser(
+        JSON.parse(storedUser)
+      );
+    }
+
     loadPage("files");
   }, []);
 
   /* ================= UPLOAD ================= */
 
-  const upload = async (selectedFile) => {
+  const upload = async (selectedFiles) => {
 
     try {
 
-      if (!selectedFile) return;
+      if (!token) {
+        alert(
+          "Please login again before uploading."
+        );
+
+        navigate("/login");
+
+        return;
+      }
+
+      const files =
+        Array.from(selectedFiles || []);
+
+      if (files.length === 0) return;
 
       const data = new FormData();
 
-      data.append(
-        "file",
-        selectedFile
-      );
+      files.forEach((file) => {
+        data.append("files", file);
+
+        data.append(
+          "relativePaths",
+          file.webkitRelativePath ||
+            file.name
+        );
+      });
 
       await axios.post(
         `${API}/api/files/upload`,
@@ -358,8 +465,6 @@ function Dashboard() {
           headers: {
             Authorization:
               `Bearer ${token}`,
-            "Content-Type":
-              "multipart/form-data",
           },
         }
       );
@@ -370,7 +475,17 @@ function Dashboard() {
 
       console.log(err);
 
-      alert("Upload failed");
+      const message =
+        [
+          err.response?.data?.message,
+          err.response?.data?.code,
+          err.response?.data?.statusCode,
+        ]
+          .filter(Boolean)
+          .join(" ") ||
+        "Upload failed";
+
+      alert(message);
     }
   };
 
@@ -378,14 +493,17 @@ function Dashboard() {
 
   const getIcon = (name) => {
 
-    if (name.endsWith(".pdf")) {
+    const fileName =
+      name.toLowerCase();
+
+    if (fileName.endsWith(".pdf")) {
       return <FaFilePdf />;
     }
 
     if (
-      name.endsWith(".png") ||
-      name.endsWith(".jpg") ||
-      name.endsWith(".jpeg")
+      fileName.endsWith(".png") ||
+      fileName.endsWith(".jpg") ||
+      fileName.endsWith(".jpeg")
     ) {
       return <FaImage />;
     }
@@ -403,6 +521,17 @@ function Dashboard() {
           search.toLowerCase()
         )
   );
+
+  const getFileUrl = (file) => {
+    if (
+      file.url?.startsWith("http://") ||
+      file.url?.startsWith("https://")
+    ) {
+      return file.url;
+    }
+
+    return `${API}${file.url}`;
+  };
 
   /* ================= RENDER FILES ================= */
 
@@ -436,7 +565,7 @@ function Dashboard() {
           {/* VIEW */}
 
           <a
-            href={`${API}${f.url}`}
+            href={getFileUrl(f)}
             target="_blank"
             rel="noreferrer"
             title="View"
@@ -447,7 +576,7 @@ function Dashboard() {
           {/* DOWNLOAD */}
 
           <a
-            href={`${API}${f.url}`}
+            href={getFileUrl(f)}
             download
             title="Download"
           >
@@ -491,7 +620,7 @@ function Dashboard() {
             onClick={() => {
 
               navigator.clipboard.writeText(
-                `${API}${f.url}`
+                getFileUrl(f)
               );
 
               alert(
@@ -526,9 +655,17 @@ function Dashboard() {
 
                 console.log(err);
 
-                alert(
-                  "Delete failed"
-                );
+                const message =
+                  [
+                    err.response?.data?.message,
+                    err.response?.data?.code,
+                    err.response?.data?.statusCode,
+                  ]
+                    .filter(Boolean)
+                    .join(" ") ||
+                  "Delete failed";
+
+                alert(message);
               }
             }}
           >
@@ -680,23 +817,48 @@ function Dashboard() {
 
           {/* TOPBAR */}
 
+
           <div className="topbar">
 
             <h2>My Drive</h2>
 
-            <div className="search-box">
+            <div className="topbar-actions">
 
-              <FaSearch />
+              <div className="search-box">
 
-              <input
-                type="text"
-                placeholder="Search files..."
-                onChange={(e) =>
-                  setSearch(
-                    e.target.value
-                  )
+                <FaSearch />
+
+                <input
+                  type="text"
+                  placeholder="Search files..."
+                  onChange={(e) =>
+                    setSearch(
+                      e.target.value
+                    )
+                  }
+                />
+
+              </div>
+
+              <button
+                className="profile-chip"
+                type="button"
+                title="Profile"
+                onClick={() =>
+                  navigate("/profile")
                 }
-              />
+              >
+                <span className="profile-avatar">
+                  {profileInitial}
+                </span>
+
+                <span className="profile-details">
+                  <span>{profileName}</span>
+                  {profileEmail && (
+                    <small>{profileEmail}</small>
+                  )}
+                </span>
+              </button>
 
             </div>
 
@@ -845,11 +1007,14 @@ function Dashboard() {
 
             <input
               type="file"
+              multiple
               hidden
               onChange={(e) => {
                 upload(
-                  e.target.files[0]
+                  e.target.files
                 );
+
+                e.target.value = "";
               }}
             />
 
@@ -866,8 +1031,48 @@ function Dashboard() {
 /* ================= APP ================= */
 
 export default function App() {
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
+
+    return () =>
+      clearTimeout(timer);
+  }, []);
+
   return (
-    <Routes>
+    <>
+      {isLoading && (
+        <div className="preloader">
+
+          <div className="preloader-ring">
+
+            <span className="preloader-logo">
+              CD
+            </span>
+
+          </div>
+
+          <h1>CloDrive</h1>
+
+          <div className="preloader-bar">
+            <span />
+          </div>
+
+        </div>
+      )}
+
+      <div
+        className={
+          isLoading
+            ? "app-shell app-shell-loading"
+            : "app-shell"
+        }
+      >
+        <Routes>
 
       <Route
         path="/"
@@ -889,6 +1094,13 @@ export default function App() {
         element={<Dashboard />}
       />
 
-    </Routes>
+      <Route
+        path="/profile"
+        element={<Profile />}
+/>
+        </Routes>
+      </div>
+    </>
   );
+  
 }

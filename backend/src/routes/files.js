@@ -2,86 +2,106 @@ const express = require("express");
 
 const multer = require("multer");
 
-const path = require("path");
-
-const fs = require("fs");
-
 const auth = require("../middleware/auth");
+
+const db = require("../db");
 
 const store = require("../store");
 
+const {
+  uploadToAzureBlob,
+  deleteFromAzureBlob,
+} = require("../azureBlob");
+
 const router = express.Router();
-
-/* ================= UPLOAD DIR ================= */
-
-const uploadsDir = path.join(
-  __dirname,
-  "../../uploads"
-);
-
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, {
-    recursive: true,
-  });
-}
 
 /* ================= MULTER ================= */
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadsDir);
-  },
-
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(
-      /\s+/g,
-      "-"
-    );
-
-    cb(
-      null,
-      `${Date.now()}-${safe}`
-    );
-  },
+const upload = multer({
+  storage: multer.memoryStorage(),
 });
-
-const upload = multer({ storage });
 
 /* ================= UPLOAD ================= */
 
 router.post(
   "/upload",
   auth,
-  upload.single("file"),
-  (req, res) => {
+  upload.array("files", 100),
+  async (req, res) => {
     try {
-      if (!req.file) {
+      const files =
+        req.files || [];
+
+      if (files.length === 0) {
         return res.status(400).json({
-          message: "No file uploaded",
+          message: "No files uploaded",
         });
       }
 
-      const saved = store.addFile({
-        ownerId: req.user.id,
+      const relativePaths =
+        Array.isArray(req.body.relativePaths)
+          ? req.body.relativePaths
+          : [req.body.relativePaths];
 
-        originalName:
-          req.file.originalname,
+      const savedFiles = [];
 
-        storedName:
-          req.file.filename,
+      const userResult =
+        await db.query(
+          "SELECT username FROM users WHERE id = $1",
+          [req.user.id]
+        );
 
-        size: req.file.size,
-      });
+      const ownerName =
+        userResult.rows[0]?.username ||
+        String(req.user.id);
+
+      for (const [index, file] of files.entries()) {
+        const azureFile =
+          await uploadToAzureBlob({
+            file,
+            ownerId: req.user.id,
+            ownerName,
+            relativePath:
+              relativePaths[index],
+          });
+
+        const saved = store.addFile({
+          ownerId: req.user.id,
+
+          originalName:
+            relativePaths[index] ||
+            file.originalname,
+
+          storedName:
+            azureFile.blobName,
+
+          size: file.size,
+
+          url: azureFile.url,
+
+          azureBlobName:
+            azureFile.blobName,
+
+          azureUrl:
+            azureFile.url,
+        });
+
+        savedFiles.push(saved);
+      }
 
       return res.status(201).json({
-        message: "Uploaded",
-        file: saved,
+        message: "Uploaded to Azure Blob Storage",
+        files: savedFiles,
       });
     } catch (error) {
       console.error(error);
 
       res.status(500).json({
-        message: "Upload failed",
+        message:
+          error.message ||
+          "Upload failed",
+        code: error.code,
+        statusCode: error.statusCode,
       });
     }
   }
@@ -173,22 +193,52 @@ router.put(
 router.delete(
   "/:id",
   auth,
-  (req, res) => {
-    const file =
-      store.deleteFile(
-        req.params.id,
-        req.user.id
+  async (req, res) => {
+    try {
+      const existingFile =
+        store.getFile(
+          req.params.id,
+          req.user.id
+        );
+
+      if (!existingFile) {
+        return res.status(404).json({
+          message: "File not found",
+        });
+      }
+
+      await deleteFromAzureBlob(
+        existingFile.azureBlobName ||
+          existingFile.storedName
       );
 
-    if (!file) {
-      return res.status(404).json({
-        message: "File not found",
+      const file =
+        store.deleteFile(
+          req.params.id,
+          req.user.id
+        );
+
+      if (!file) {
+        return res.status(404).json({
+          message: "File not found",
+        });
+      }
+
+      res.json({
+        message: "Deleted from Azure Blob Storage",
+        file,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        message:
+          error.message ||
+          "Delete failed",
+        code: error.code,
+        statusCode: error.statusCode,
       });
     }
-
-    res.json({
-      message: "Moved to trash",
-    });
   }
 );
 
