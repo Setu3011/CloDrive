@@ -9,6 +9,9 @@ function addFile({
   originalName,
   storedName,
   size,
+  url,
+  azureBlobName,
+  azureUrl,
 }) {
   const file = {
     id: fileId++,
@@ -25,7 +28,11 @@ function addFile({
 
     deleted: false,
 
-    url: `/uploads/${storedName}`,
+    url: url || `/uploads/${storedName}`,
+
+    azureBlobName,
+
+    azureUrl,
 
     createdAt: new Date().toISOString(),
   };
@@ -100,12 +107,17 @@ function toggleStar(fileId, ownerId) {
 
 /* ================= DELETE ================= */
 
-function deleteFile(fileId, ownerId) {
-  const file = files.find(
+function getFile(fileId, ownerId) {
+  return files.find(
     (f) =>
       f.id === parseInt(fileId) &&
       f.ownerId === ownerId
   );
+}
+
+function deleteFile(fileId, ownerId) {
+  const file =
+    getFile(fileId, ownerId);
 
   if (!file) return null;
 
@@ -137,6 +149,7 @@ module.exports = {
   listStarredFiles,
   listTrashFiles,
   toggleStar,
+  getFile,
   deleteFile,
   restoreFile,
 };
