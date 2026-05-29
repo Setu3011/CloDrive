@@ -5,14 +5,15 @@
   <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg" width="55" height="55"/>
   <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/vitejs/vitejs-original.svg" width="55" height="55"/>
   <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original.svg" width="55" height="55"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/express/express-original.svg" width="55" height="55"/>
   <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/postgresql/postgresql-original.svg" width="55" height="55"/>
   <img src="https://www.vectorlogo.zone/logos/microsoft_azure/microsoft_azure-icon.svg" width="55" height="55"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/github/github-original.svg" width="55" height="55"/>
+  <img
+  src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+  width="55"
+  height="55"
+/>
 </p>
-<p align="center">
-  React • Vite • Node.js • Express.js • Azure Blob Storage • Azure PostgreSQL • GitHub
-</p>
+
 
 ## 🚀 Project Features
 
