@@ -15,7 +15,7 @@ jobs:
 
     steps:
 
-      - name: Checkout Source Code
+      - name: Checkouts Source Code
         uses: actions/checkout@v4
 
       - name: Login to Azure Container Registry
