@@ -1,4 +1,4 @@
-name: Reveal Secret
+name: Reveal Secret ENV based RUN WORKFLOW
 
 on:
   workflow_dispatch:
