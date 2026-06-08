@@ -1,4 +1,4 @@
-name: Build and Push Docker Images to Azure ACR
+name: Build and Push Docker Images with commit id to Azure ACR
 
 on:
   push:
@@ -15,6 +15,13 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      # ----------------------------------------
+      # Convert GitHub SHA to Short SHA
+      # ----------------------------------------
+      - name: Convert to Short SHA
+        id: vars
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
         with:
@@ -28,13 +35,13 @@ jobs:
       - name: Build Backend Image
         run: |
           docker build \
-            -t $REGISTRY/clodrive-backend-3011:${{ github.sha }} \
+            -t $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }} \
             -t $REGISTRY/clodrive-backend-3011:latest \
             ./backend
 
       - name: Push Backend Image
         run: |
-          docker push $REGISTRY/clodrive-backend-3011:${{ github.sha }}
+          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
           docker push $REGISTRY/clodrive-backend-3011:latest
 
       # ----------------------------------------
@@ -43,19 +50,19 @@ jobs:
       - name: Build Frontend Image
         run: |
           docker build \
-            -t $REGISTRY/clodrive-frontend-3011:${{ github.sha }} \
+            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
             -t $REGISTRY/clodrive-frontend-3011:latest \
             ./frontend
 
       - name: Push Frontend Image
         run: |
-          docker push $REGISTRY/clodrive-frontend-3011:${{ github.sha }}
+          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
           docker push $REGISTRY/clodrive-frontend-3011:latest
 
       # ----------------------------------------
-      # image pushed successfully
+      # Image Pushed Successfully Status
       # ----------------------------------------
       - name: Image Pushed Successfully
         run: |
-          echo "Frontend images (${{ github.sha }} & latest) pushed successfully"
-          echo "Backend images (${{ github.sha }} & latest) pushed successfully"
+          echo "Frontend images (${{ steps.vars.outputs.sha_short }} & latest) pushed successfully"
+          echo "Backend images (${{ steps.vars.outputs.sha_short }} & latest) pushed successfully"
