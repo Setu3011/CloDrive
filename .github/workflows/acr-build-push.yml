@@ -25,16 +25,6 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build Frontend Image
-        run: |
-          docker build \
-            -t $REGISTRY/clodrive-frontend-3011:latest \
-            ./frontend
-
-      - name: Push Frontend Image
-        run: |
-          docker push \
-            $REGISTRY/clodrive-frontend-3011:latest
 
       - name: Build Backend Image
         run: |
@@ -46,6 +36,18 @@ jobs:
         run: |
           docker push \
             $REGISTRY/clodrive-backend-3011:latest
+
+      - name: Build Frontend Image
+        run: |
+          docker build \
+            -t $REGISTRY/clodrive-frontend-3011:latest \
+            ./frontend
+
+      - name: Push Frontend Image
+        run: |
+          docker push \
+            $REGISTRY/clodrive-frontend-3011:latest
+
 
       - name: Verify Images
         run: |
