@@ -55,7 +55,7 @@ jobs:
       - name: Push Backend Image
         id: backend_push
         run: |
-          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.output.sha_short }}
+          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
           docker push $REGISTRY/clodrive-backend-3011:latest
 
       # ----------------------------------------
