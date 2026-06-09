@@ -1,9 +1,20 @@
 name: Build and Push Docker Images with EMAIL Notification
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Select Environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          
+# on:
+#   push:
+#     branches:
+#       - main
   
 env:
   REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
@@ -44,7 +55,7 @@ jobs:
       - name: Push Backend Image
         id: backend_push
         run: |
-          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.output.sha_short }}
           docker push $REGISTRY/clodrive-backend-3011:latest
 
       # ----------------------------------------
@@ -54,14 +65,14 @@ jobs:
         id: frontend_build
         run: |
          docker build \
-            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.output.sha_short }} \
+            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
             -t $REGISTRY/clodrive-frontend-3011:latest \
             ./frontend
 
       - name: Push Frontend Image
         id: frontend_push
         run: |
-          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.output.sha_short }}
+          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
           docker push $REGISTRY/clodrive-frontend-3011:latest
 
 
