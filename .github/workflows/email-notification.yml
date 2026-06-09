@@ -1,0 +1,153 @@
+name: Build and Push Docker Images with commit id to Azure ACR
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Convert to Short SHA
+        id: vars
+        run: |
+          echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Azure Container Registry
+        id: acr_login
+        run: |
+          docker login ${{ secrets.ACR_LOGIN_SERVER }} \
+            -u ${{ secrets.ACR_USERNAME }} \
+            -p ${{ secrets.ACR_PASSWORD }}
+
+      # ----------------------------------------
+      # Backend Build & Push
+      # ----------------------------------------
+      - name: Build Backend Image
+        id: backend_build
+        run: |
+          docker build \
+            -t $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }} \
+            -t $REGISTRY/clodrive-backend-3011:latest \
+            ./backend
+
+      - name: Push Backend Image
+        id: backend_push
+        run: |
+          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/clodrive-backend-3011:latest
+
+      # ----------------------------------------
+      # Frontend Build & Push
+      # ----------------------------------------
+      - name: Build Frontend Image
+        id: frontend_build
+        run: |
+          docker build \
+            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
+            -t $REGISTRY/clodrive-frontend-3011:latest \
+            ./frontend
+
+      - name: Push Frontend Image
+        id: frontend_push
+        run: |
+          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/clodrive-frontend-3011:latest
+
+      - name: Image Pushed Successfully
+        id: completed
+        run: |
+          echo "Frontend images pushed successfully"
+          echo "Backend images pushed successfully"
+
+      # ----------------------------------------------------
+      # SUCCESS EMAIL
+      # ----------------------------------------------------
+      - name: Send Success Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+
+          subject: |
+            ✅ GitHub Actions Pipeline SUCCESS
+
+          to: ${{ secrets.MAIL_TO }}
+          from: GitHub Actions
+
+          body: |
+            Pipeline Status: SUCCESS
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # ----------------------------------------------------
+      # DETERMINE FAILED STAGE
+      # ----------------------------------------------------
+      - name: Identify Failed Stage
+        if: failure()
+        id: failed_stage
+        run: |
+        
+          if [ "${{ steps.backend_build.outcome }}" == "failure" ]; then
+            echo "FAILED_STAGE=Backend Image Build" >> $GITHUB_ENV
+          elif [ "${{ steps.backend_push.outcome }}" == "failure" ]; then
+            echo "FAILED_STAGE=Backend Image Push" >> $GITHUB_ENV
+          elif [ "${{ steps.frontend_build.outcome }}" == "failure" ]; then
+            echo "FAILED_STAGE=Frontend Image Build" >> $GITHUB_ENV
+          elif [ "${{ steps.frontend_push.outcome }}" == "failure" ]; then
+            echo "FAILED_STAGE=Frontend Image Push" >> $GITHUB_ENV
+          else
+            echo "FAILED_STAGE=Unknown Stage" >> $GITHUB_ENV
+          fi
+      
+      # ----------------------------------------------------
+      # FAILURE EMAIL
+      # ----------------------------------------------------
+      - name: Send Failure Email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+
+          subject: |
+            ❌ GitHub Actions Pipeline FAILED
+
+          to: ${{ secrets.MAIL_TO }}
+          from: GitHub Actions
+
+          body: |
+            Pipeline Status: FAILED
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit ID: ${{ github.sha }}
+
+            Failed Stage:
+            ${{ env.FAILED_STAGE }}
+
+            Workflow:
+            ${{ github.workflow }}
+
+            Run Number:
+            ${{ github.run_number }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
