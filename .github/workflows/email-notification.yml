@@ -1,16 +1,17 @@
-name: Build and Push Docker Images with commit id to Azure ACR
+name: Build and Push Docker Images with EMAIL Notification
 
 on:
   push:
     branches:
       - main
-
+  
 env:
   REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment: dev
 
     steps:
       - name: Checkout Source Code
@@ -23,11 +24,11 @@ jobs:
           echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
 
       - name: Login to Azure Container Registry
-        id: acr_login
-        run: |
-          docker login ${{ secrets.ACR_LOGIN_SERVER }} \
-            -u ${{ secrets.ACR_USERNAME }} \
-            -p ${{ secrets.ACR_PASSWORD }}
+        uses: docker/login-action@v3
+        with:
+           registry: ${{ secrets.ACR_LOGIN_SERVER }}
+           username: ${{ secrets.ACR_USERNAME }}
+           password: ${{ secrets.ACR_PASSWORD }}
 
       # ----------------------------------------
       # Backend Build & Push
@@ -79,13 +80,13 @@ jobs:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-          username: ${{ secrets.MAIL_USERNAME }}
+          username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
 
           subject: |
             ✅ GitHub Actions Pipeline SUCCESS
 
-          to: ${{ secrets.MAIL_TO }}
+          to: ${{ vars.MAIL_TO }}
           from: GitHub Actions
 
           body: |
@@ -124,13 +125,13 @@ jobs:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-          username: ${{ secrets.MAIL_USERNAME }}
+          username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
 
           subject: |
             ❌ GitHub Actions Pipeline FAILED
 
-          to: ${{ secrets.MAIL_TO }}
+          to: ${{ vars.MAIL_TO }}
           from: GitHub Actions
 
           body: |
