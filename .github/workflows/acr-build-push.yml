@@ -3,9 +3,10 @@ on:
   push:
     branches:
       - main
-
+ 
 env:
   REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+
 
 jobs:
   build-and-push:
