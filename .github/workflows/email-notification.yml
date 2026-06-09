@@ -73,7 +73,7 @@ jobs:
       # SUCCESS EMAIL
       # ----------------------------------------------------
       - name: Send Success Email
-        if: success()
+        if: success() && secrets.MAIL_TO != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != ''
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -118,7 +118,7 @@ jobs:
       # FAILURE EMAIL
       # ----------------------------------------------------
       - name: Send Failure Email
-        if: failure()
+        if: failure() && secrets.MAIL_TO != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != ''
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
