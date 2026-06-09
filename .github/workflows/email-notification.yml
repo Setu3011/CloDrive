@@ -53,15 +53,15 @@ jobs:
       - name: Build Frontend Image
         id: frontend_build
         run: |
-          docker build \
-            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
+         docker build \
+            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.output.sha_short }} \
             -t $REGISTRY/clodrive-frontend-3011:latest \
             ./frontend
 
       - name: Push Frontend Image
         id: frontend_push
         run: |
-          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.output.sha_short }}
           docker push $REGISTRY/clodrive-frontend-3011:latest
 
       - name: Image Pushed Successfully
