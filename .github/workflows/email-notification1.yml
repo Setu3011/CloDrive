@@ -12,246 +12,238 @@ on:
           - staging
 
 env:
-REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ github.event.inputs.environment }}
 
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
 
-  steps:
-  - name: Checkout Source Code
-    uses: actions/checkout@v4
+      - name: Convert to Short SHA
+        id: vars
+        run: |
+          echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
 
-  - name: Convert to Short SHA
-    id: vars
-    run: |
-      echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
-  - name: Login to Azure Container Registry
-    uses: docker/login-action@v3
-    with:
-      registry: ${{ secrets.ACR_LOGIN_SERVER }}
-      username: ${{ secrets.ACR_USERNAME }}
-      password: ${{ secrets.ACR_PASSWORD }}
+      # ====================================================
+      # BACKEND BUILD
+      # ====================================================
 
-  # ====================================================
-  # BACKEND BUILD
-  # ====================================================
+      - name: Build Backend Image
+        id: backend_build
+        continue-on-error: true
+        run: |
+          docker build \
+            -t $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }} \
+            -t $REGISTRY/clodrive-backend-3011:latest \
+            ./backend
 
-  - name: Build Backend Image
-    id: backend_build
-    continue-on-error: true
-    run: |
-      docker build \
-        -t $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }} \
-        -t $REGISTRY/clodrive-backend-3011:latest \
-        ./backend
+      - name: Send Backend Build Failure Email
+        if: steps.backend_build.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ GitHub Actions Backend Image Build Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: ${{ vars.MAIL_USERNAME }}
 
-  - name: Send Backend Build Failure Email
-    if: steps.backend_build.outcome == 'failure'
-    uses: dawidd6/action-send-mail@v3
-    with:
-      server_address: smtp.gmail.com
-      server_port: 465
-      secure: true
-      username: ${{ vars.MAIL_USERNAME }}
-      password: ${{ secrets.MAIL_PASSWORD }}
+          body: |
+            Pipeline Status: FAILED
 
-      subject: |
-        ❌ GitHub Actions Backend Image Build Failed
+            Failed Stage:
+            Backend Image Build
 
-      to: ${{ vars.MAIL_TO }}
-      from: GitHub Actions
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit ID: ${{ github.sha }}
 
-      body: |
-        Pipeline Status: FAILED
+            Workflow:
+            ${{ github.workflow }}
 
-        Failed Stage:
-        Backend Image Build
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-        Workflow:
-        ${{ github.workflow }}
+      - name: Stop Workflow After Backend Build Failure
+        if: steps.backend_build.outcome == 'failure'
+        run: exit 1
 
-        Workflow URL:
-        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      # ====================================================
+      # BACKEND PUSH
+      # ====================================================
 
-  - name: Stop Workflow After Backend Build Failure
-    if: steps.backend_build.outcome == 'failure'
-    run: exit 1
+      - name: Push Backend Image
+        id: backend_push
+        continue-on-error: true
+        run: |
+          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/clodrive-backend-3011:latest
 
-  # ====================================================
-  # BACKEND PUSH
-  # ====================================================
+      - name: Send Backend Push Failure Email
+        if: steps.backend_push.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ GitHub Actions Backend Image Push Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: ${{ vars.MAIL_USERNAME }}
 
-  - name: Push Backend Image
-    id: backend_push
-    continue-on-error: true
-    run: |
-      docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
-      docker push $REGISTRY/clodrive-backend-3011:latest
+          body: |
+            Pipeline Status: FAILED
 
-  - name: Send Backend Push Failure Email
-    if: steps.backend_push.outcome == 'failure'
-    uses: dawidd6/action-send-mail@v3
-    with:
-      server_address: smtp.gmail.com
-      server_port: 465
-      secure: true
-      username: ${{ vars.MAIL_USERNAME }}
-      password: ${{ secrets.MAIL_PASSWORD }}
+            Failed Stage:
+            Backend Image Push
 
-      subject: |
-        ❌ GitHub Actions Backend Image Push Failed
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit ID: ${{ github.sha }}
 
-      to: ${{ vars.MAIL_TO }}
-      from: GitHub Actions 
+            Workflow:
+            ${{ github.workflow }}
 
-      body: |
-        Pipeline Status: FAILED
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-        Failed Stage:
-        Backend Image Push
+      - name: Stop Workflow After Backend Push Failure
+        if: steps.backend_push.outcome == 'failure'
+        run: exit 1
 
-        Workflow:
-        ${{ github.workflow }}
+      # ====================================================
+      # FRONTEND BUILD
+      # ====================================================
 
-        Workflow URL:
-        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Build Frontend Image
+        id: frontend_build
+        continue-on-error: true
+        run: |
+          docker build \
+            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
+            -t $REGISTRY/clodrive-frontend-3011:latest \
+            ./frontend
 
-  - name: Stop Workflow After Backend Push Failure
-    if: steps.backend_push.outcome == 'failure'
-    run: exit 1
+      - name: Send Frontend Build Failure Email
+        if: steps.frontend_build.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ GitHub Actions Frontend Image Build Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: ${{ vars.MAIL_USERNAME }}
 
-  # ====================================================
-  # FRONTEND BUILD
-  # ====================================================
+          body: |
+            Pipeline Status: FAILED
 
-  - name: Build Frontend Image
-    id: frontend_build
-    continue-on-error: true
-    run: |
-      docker build \
-        -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
-        -t $REGISTRY/clodrive-frontend-3011:latest \
-        ./frontend
+            Failed Stage:
+            Frontend Image Build
 
-  - name: Send Frontend Build Failure Email
-    if: steps.frontend_build.outcome == 'failure'
-    uses: dawidd6/action-send-mail@v3
-    with:
-      server_address: smtp.gmail.com
-      server_port: 465
-      secure: true
-      username: ${{ vars.MAIL_USERNAME }}
-      password: ${{ secrets.MAIL_PASSWORD }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit ID: ${{ github.sha }}
 
-      subject: |
-        ❌ GitHub Actions Frontend Image Build Failed
+            Workflow:
+            ${{ github.workflow }}
 
-      to: ${{ vars.MAIL_TO }}
-      from: GitHub Actions
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      body: |
-        Pipeline Status: FAILED
+      - name: Stop Workflow After Frontend Build Failure
+        if: steps.frontend_build.outcome == 'failure'
+        run: exit 1
 
-        Failed Stage:
-        Frontend Image Build
+      # ====================================================
+      # FRONTEND PUSH
+      # ====================================================
 
-        Workflow:
-        ${{ github.workflow }}
+      - name: Push Frontend Image
+        id: frontend_push
+        continue-on-error: true
+        run: |
+          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/clodrive-frontend-3011:latest
 
-        Workflow URL:
-        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Send Frontend Push Failure Email
+        if: steps.frontend_push.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ GitHub Actions Frontend Image Push Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: ${{ vars.MAIL_USERNAME }}
 
-  - name: Stop Workflow After Frontend Build Failure
-    if: steps.frontend_build.outcome == 'failure'
-    run: exit 1
+          body: |
+            Pipeline Status: FAILED
 
-  # ====================================================
-  # FRONTEND PUSH
-  # ====================================================
+            Failed Stage:
+            Frontend Image Push
 
-  - name: Push Frontend Image
-    id: frontend_push
-    continue-on-error: true
-    run: |
-      docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
-      docker push $REGISTRY/clodrive-frontend-3011:latest
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit ID: ${{ github.sha }}
 
-  - name: Send Frontend Push Failure Email
-    if: steps.frontend_push.outcome == 'failure'
-    uses: dawidd6/action-send-mail@v3
-    with:
-      server_address: smtp.gmail.com
-      server_port: 465
-      secure: true
-      username: ${{ vars.MAIL_USERNAME }}
-      password: ${{ secrets.MAIL_PASSWORD }}
+            Workflow:
+            ${{ github.workflow }}
 
-      subject: |
-        ❌ GitHub Actions Frontend Image Push Failed
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      to: ${{ vars.MAIL_TO }}
-      from: GitHub Actions
+      - name: Stop Workflow After Frontend Push Failure
+        if: steps.frontend_push.outcome == 'failure'
+        run: exit 1
 
-      body: |
-        Pipeline Status: FAILED
+      # ====================================================
+      # SUCCESS EMAIL
+      # ====================================================
 
-        Failed Stage:
-        Frontend Image Push
+      - name: Send Success Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "✅ GitHub Actions ACR Image Build-Push Pipeline SUCCESS"
+          to: ${{ vars.MAIL_TO }}
+          from: ${{ vars.MAIL_USERNAME }}
 
-        Workflow:
-        ${{ github.workflow }}
+          body: |
+            Pipeline Status: SUCCESS
 
-        Workflow URL:
-        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit ID: ${{ github.sha }}
 
-  - name: Stop Workflow After Frontend Push Failure
-    if: steps.frontend_push.outcome == 'failure'
-    run: exit 1
+            Workflow:
+            ${{ github.workflow }}
 
-  # ====================================================
-  # SUCCESS MESSAGE
-  # ====================================================
+            Run Number:
+            ${{ github.run_number }}
 
-  - name: Images Pushed Successfully
-    run: |
-      echo "Backend image pushed successfully"
-      echo "Frontend image pushed successfully"
-
-  # ====================================================
-  # SUCCESS EMAIL
-  # ====================================================
-
-  - name: Send Success Email
-    if: success()
-    uses: dawidd6/action-send-mail@v3
-    with:
-      server_address: smtp.gmail.com
-      server_port: 465
-      secure: true
-      username: ${{ vars.MAIL_USERNAME }}
-      password: ${{ secrets.MAIL_PASSWORD }}
-
-      subject: |
-        ✅ GitHub Actions ACR IMAGE build-push Pipeline SUCCESS
-
-      to: ${{ vars.MAIL_TO }}
-      from: GitHub Actions
-
-      body: |
-        Pipeline Status: SUCCESS
-
-        Repository: ${{ github.repository }}
-        Branch: ${{ github.ref_name }}
-        Commit ID: ${{ github.sha }}
-
-        Workflow:
-        ${{ github.workflow }}
-
-
-        Workflow URL:
-        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
