@@ -10,11 +10,7 @@ on:
         options:
           - dev
           - staging
-          
-# on:
-#   push:
-#     branches:
-#       - main
+
 
 env:
   REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
