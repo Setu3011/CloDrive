@@ -75,7 +75,6 @@ jobs:
           docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
           docker push $REGISTRY/clodrive-frontend-3011:latest
 
-
       - name: Image Pushed Successfully
         id: completed
         run: |
