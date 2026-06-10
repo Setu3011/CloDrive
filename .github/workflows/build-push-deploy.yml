@@ -1,21 +1,21 @@
 name: Build, Push and Deploy to Azure Container Apps
 
 on:
-workflow_dispatch:
-inputs:
-environment:
-description: Select Environment
-required: true
-type: choice
-options:
-- dev
-- staging
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Select Environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
 
 env:
-REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
-RESOURCE_GROUP: azure-resource-group
-BACKEND_APP: clodrive-backend
-FRONTEND_APP: clodrive-frontend
+  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+  RESOURCE_GROUP: azure-resource-group
+  BACKEND_APP: clodrive-backend
+  FRONTEND_APP: clodrive-frontend
 
 jobs:
 
