@@ -1,26 +1,26 @@
 name: Build and Push Docker Images with EMAIL-Notification
 
 on:
-workflow_dispatch:
-inputs:
-environment:
-description: Select Environment
-required: true
-type: choice
-options:
-- dev
-- staging
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Select Environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
 
 env:
 REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
 
 jobs:
-build-and-push:
-runs-on: ubuntu-latest
-environment: dev
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: dev
 
 
-steps:
+  steps:
   - name: Checkout Source Code
     uses: actions/checkout@v4
 
