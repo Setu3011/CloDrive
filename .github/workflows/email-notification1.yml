@@ -59,7 +59,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "❌ GitHub Actions Backend Image Build Failed"
           to: ${{ vars.MAIL_TO }}
-          from: ${{ vars.MAIL_USERNAME }}
+          from: GitHub Actions
 
           body: |
             Pipeline Status: FAILED
@@ -103,7 +103,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "❌ GitHub Actions Backend Image Push Failed"
           to: ${{ vars.MAIL_TO }}
-          from: ${{ vars.MAIL_USERNAME }}
+          from: GitHub Actions
 
           body: |
             Pipeline Status: FAILED
@@ -149,7 +149,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "❌ GitHub Actions Frontend Image Build Failed"
           to: ${{ vars.MAIL_TO }}
-          from: ${{ vars.MAIL_USERNAME }}
+          from: GitHub Actions
 
           body: |
             Pipeline Status: FAILED
@@ -193,7 +193,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "❌ GitHub Actions Frontend Image Push Failed"
           to: ${{ vars.MAIL_TO }}
-          from: ${{ vars.MAIL_USERNAME }}
+          from: GitHub Actions
 
           body: |
             Pipeline Status: FAILED
@@ -230,20 +230,15 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "✅ GitHub Actions ACR Image Build-Push Pipeline SUCCESS"
           to: ${{ vars.MAIL_TO }}
-          from: ${{ vars.MAIL_USERNAME }}
+          from: GitHub Actions
 
           body: |
             Pipeline Status: SUCCESS
 
             Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit ID: ${{ github.sha }}
 
             Workflow:
             ${{ github.workflow }}
-
-            Run Number:
-            ${{ github.run_number }}
 
             Workflow URL:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
