@@ -11,7 +11,6 @@ options:
 - dev
 - staging
 
-
 env:
 REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
 
@@ -61,7 +60,7 @@ steps:
       password: ${{ secrets.MAIL_PASSWORD }}
 
       subject: |
-        ❌ Backend Image Build Failed
+        ❌ GitHub Actions Backend Image Build Failed
 
       to: ${{ vars.MAIL_TO }}
       from: GitHub Actions
@@ -71,10 +70,6 @@ steps:
 
         Failed Stage:
         Backend Image Build
-
-        Repository: ${{ github.repository }}
-        Branch: ${{ github.ref_name }}
-        Commit ID: ${{ github.sha }}
 
         Workflow:
         ${{ github.workflow }}
@@ -108,7 +103,7 @@ steps:
       password: ${{ secrets.MAIL_PASSWORD }}
 
       subject: |
-        ❌ Backend Image Push Failed
+        ❌ GitHub Actions Backend Image Push Failed
 
       to: ${{ vars.MAIL_TO }}
       from: GitHub Actions 
@@ -118,10 +113,6 @@ steps:
 
         Failed Stage:
         Backend Image Push
-
-        Repository: ${{ github.repository }}
-        Branch: ${{ github.ref_name }}
-        Commit ID: ${{ github.sha }}
 
         Workflow:
         ${{ github.workflow }}
@@ -157,7 +148,7 @@ steps:
       password: ${{ secrets.MAIL_PASSWORD }}
 
       subject: |
-        ❌ Frontend Image Build Failed
+        ❌ GitHub Actions Frontend Image Build Failed
 
       to: ${{ vars.MAIL_TO }}
       from: GitHub Actions
@@ -167,10 +158,6 @@ steps:
 
         Failed Stage:
         Frontend Image Build
-
-        Repository: ${{ github.repository }}
-        Branch: ${{ github.ref_name }}
-        Commit ID: ${{ github.sha }}
 
         Workflow:
         ${{ github.workflow }}
@@ -204,7 +191,7 @@ steps:
       password: ${{ secrets.MAIL_PASSWORD }}
 
       subject: |
-        ❌ Frontend Image Push Failed
+        ❌ GitHub Actions Frontend Image Push Failed
 
       to: ${{ vars.MAIL_TO }}
       from: GitHub Actions
@@ -214,10 +201,6 @@ steps:
 
         Failed Stage:
         Frontend Image Push
-
-        Repository: ${{ github.repository }}
-        Branch: ${{ github.ref_name }}
-        Commit ID: ${{ github.sha }}
 
         Workflow:
         ${{ github.workflow }}
@@ -253,7 +236,7 @@ steps:
       password: ${{ secrets.MAIL_PASSWORD }}
 
       subject: |
-        ✅ GitHub Actions Pipeline SUCCESS
+        ✅ GitHub Actions ACR IMAGE build-push Pipeline SUCCESS
 
       to: ${{ vars.MAIL_TO }}
       from: GitHub Actions
@@ -268,8 +251,6 @@ steps:
         Workflow:
         ${{ github.workflow }}
 
-        Run Number:
-        ${{ github.run_number }}
 
         Workflow URL:
         https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
