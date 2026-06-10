@@ -12,156 +12,245 @@ on:
           - staging
 
 env:
-  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
 
-  RESOURCE_GROUP: azure-resource-group
+RESOURCE_GROUP: azure-resource-group
 
-  CONTAINER_APP_ENV: clodrive-env
+BACKEND_APP: clodrive-backend
+FRONTEND_APP: clodrive-frontend
 
-  BACKEND_APP: clodrive-backend
-  FRONTEND_APP: clodrive-frontend
+# JOB 1 : BUILD & PUSH
 
 jobs:
-  build-push-deploy:
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
+build-and-push:
+runs-on: ubuntu-latest
+environment: dev
 
-    steps:
+outputs:
+  sha_short: ${{ steps.vars.outputs.sha_short }}
 
-      # ====================================================
-      # CHECKOUT SOURCE
-      # ====================================================
+steps:
 
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
+  - name: Checkout Source Code
+    uses: actions/checkout@v4
 
-      # ====================================================
-      # SHORT COMMIT ID
-      # ====================================================
+  - name: Convert SHA to Short SHA
+    id: vars
+    run: |
+      echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
 
-      - name: Convert SHA to Short SHA
-        id: vars
-        run: |
-          echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+  - name: Login to Azure Container Registry
+    uses: docker/login-action@v3
+    with:
+      registry: ${{ secrets.ACR_LOGIN_SERVER }}
+      username: ${{ secrets.ACR_USERNAME }}
+      password: ${{ secrets.ACR_PASSWORD }}
 
-      # ====================================================
-      # LOGIN TO ACR
-      # ====================================================
+  # ==========================================
+  # Backend Build & Push
+  # ==========================================
 
-      - name: Login to Azure Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+  - name: Build Backend Image
+    id: backend_build
+    run: |
+      docker build \
+        -t $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }} \
+        -t $REGISTRY/clodrive-backend-3011:latest \
+        ./backend
 
-      # ====================================================
-      # BUILD BACKEND IMAGE
-      # ====================================================
+  - name: Push Backend Image
+    id: backend_push
+    run: |
+      docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
+      docker push $REGISTRY/clodrive-backend-3011:latest
 
-      - name: Build Backend Image
-        run: |
-          docker build \
-            -t $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }} \
-            -t $REGISTRY/clodrive-backend-3011:latest \
-            ./backend
+  # ==========================================
+  # Frontend Build & Push
+  # ==========================================
 
-      # ====================================================
-      # PUSH BACKEND IMAGE
-      # ====================================================
+  - name: Build Frontend Image
+    id: frontend_build
+    run: |
+      docker build \
+        -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
+        -t $REGISTRY/clodrive-frontend-3011:latest \
+        ./frontend
 
-      - name: Push Backend Image
-        run: |
-          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
-          docker push $REGISTRY/clodrive-backend-3011:latest
+  - name: Push Frontend Image
+    id: frontend_push
+    run: |
+      docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
+      docker push $REGISTRY/clodrive-frontend-3011:latest
 
-      # ====================================================
-      # BUILD FRONTEND IMAGE
-      # ====================================================
+  - name: Build and Push Completed
+    run: |
+      echo "Images pushed successfully"
 
-      - name: Build Frontend Image
-        run: |
-          docker build \
-            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
-            -t $REGISTRY/clodrive-frontend-3011:latest \
-            ./frontend
+  # ==========================================
+  # SUCCESS EMAIL
+  # ==========================================
 
-      # ====================================================
-      # PUSH FRONTEND IMAGE
-      # ====================================================
+  - name: Send Success Email
+    if: success()
+    uses: dawidd6/action-send-mail@v3
+    with:
+      server_address: smtp.gmail.com
+      server_port: 465
+      secure: true
 
-      - name: Push Frontend Image
-        run: |
-          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
-          docker push $REGISTRY/clodrive-frontend-3011:latest
+      username: ${{ vars.MAIL_USERNAME }}
+      password: ${{ secrets.MAIL_PASSWORD }}
 
-      # ====================================================
-      # AZURE LOGIN
-      # ====================================================
+      subject: "✅ Build & Push Successful"
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      to: ${{ vars.MAIL_TO }}
+      from: GitHub Actions
 
-      # ====================================================
-      # DEPLOY BACKEND CONTAINER APP
-      # ====================================================
+      body: |
+        Build and Push completed successfully.
 
-      - name: Deploy Backend Container App
-        run: |
-          az containerapp update \
-            --name $BACKEND_APP \
-            --resource-group $RESOURCE_GROUP \
-            --image $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
+        Repository:
+        ${{ github.repository }}
 
-      # ====================================================
-      # DEPLOY FRONTEND CONTAINER APP
-      # ====================================================
+        Image Tag:
+        ${{ steps.vars.outputs.sha_short }}
 
-      - name: Deploy Frontend Container App
-        run: |
-          az containerapp update \
-            --name $FRONTEND_APP \
-            --resource-group $RESOURCE_GROUP \
-            --image $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
+        Workflow URL:
+        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      # ====================================================
-      # SHOW DEPLOYMENT DETAILS
-      # ====================================================
+  # ==========================================
+  # FAILURE EMAIL
+  # ==========================================
 
-      - name: Display Deployment Information
-        run: |
-          echo "=================================="
-          echo "Deployment Successful"
-          echo "=================================="
-          echo "Backend App  : $BACKEND_APP"
-          echo "Frontend App : $FRONTEND_APP"
-          echo "Resource Group : $RESOURCE_GROUP"
-          echo "Container App Env : $CONTAINER_APP_ENV"
-          echo "Image Tag : ${{ steps.vars.outputs.sha_short }}"
-          echo "=================================="
+  - name: Send Failure Email
+    if: failure()
+    uses: dawidd6/action-send-mail@v3
+    with:
+      server_address: smtp.gmail.com
+      server_port: 465
+      secure: true
 
-      # ====================================================
-      # GET FRONTEND URL
-      # ====================================================
+      username: ${{ vars.MAIL_USERNAME }}
+      password: ${{ secrets.MAIL_PASSWORD }}
 
-      - name: Get Frontend URL
-        run: |
-          az containerapp show \
-            --name $FRONTEND_APP \
-            --resource-group $RESOURCE_GROUP \
-            --query properties.configuration.ingress.fqdn \
-            -o tsv
+      subject: "❌ Build & Push Failed"
 
-      # ====================================================
-      # GET BACKEND URL
-      # ====================================================
+      to: ${{ vars.MAIL_TO }}
+      from: GitHub Actions
 
-      - name: Get Backend URL
-        run: |
-          az containerapp show \
-            --name $BACKEND_APP \
-            --resource-group $RESOURCE_GROUP \
-            --query properties.configuration.ingress.fqdn \
-            -o tsv
+      body: |
+        Build or Push failed.
+
+        Repository:
+        ${{ github.repository }}
+
+        Workflow URL:
+        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+# JOB 2 : DEPLOY TO CONTAINER APPS
+
+deploy:
+needs: build-and-push
+
+
+runs-on: ubuntu-latest
+
+environment: dev
+
+steps:
+
+  - name: Azure Login
+    uses: azure/login@v2
+    with:
+      creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+  # ==========================================
+  # Deploy Backend
+  # ==========================================
+
+  - name: Deploy Backend Container App
+    run: |
+      az containerapp update \
+        --name $BACKEND_APP \
+        --resource-group $RESOURCE_GROUP \
+        --image $REGISTRY/clodrive-backend-3011:${{ needs.build-and-push.outputs.sha_short }}
+
+  # ==========================================
+  # Deploy Frontend
+  # ==========================================
+
+  - name: Deploy Frontend Container App
+    run: |
+      az containerapp update \
+        --name $FRONTEND_APP \
+        --resource-group $RESOURCE_GROUP \
+        --image $REGISTRY/clodrive-frontend-3011:${{ needs.build-and-push.outputs.sha_short }}
+
+  - name: Deployment Completed
+    run: |
+      echo "Backend deployed successfully"
+      echo "Frontend deployed successfully"
+
+  # ==========================================
+  # DEPLOYMENT SUCCESS EMAIL
+  # ==========================================
+
+  - name: Deployment Success Email
+    if: success()
+    uses: dawidd6/action-send-mail@v3
+    with:
+      server_address: smtp.gmail.com
+      server_port: 465
+      secure: true
+
+      username: ${{ vars.MAIL_USERNAME }}
+      password: ${{ secrets.MAIL_PASSWORD }}
+
+      subject: "🚀 Azure Container Apps Deployment Successful"
+
+      to: ${{ vars.MAIL_TO }}
+      from: GitHub Actions
+
+      body: |
+        Deployment completed successfully.
+
+        Resource Group:
+        azure-resource-group
+
+        Backend App:
+        clodrive-backend
+
+        Frontend App:
+        clodrive-frontend
+
+        Image Tag:
+        ${{ needs.build-and-push.outputs.sha_short }}
+
+        Workflow URL:
+        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  # ==========================================
+  # DEPLOYMENT FAILURE EMAIL
+  # ==========================================
+
+  - name: Deployment Failure Email
+    if: failure()
+    uses: dawidd6/action-send-mail@v3
+    with:
+      server_address: smtp.gmail.com
+      server_port: 465
+      secure: true
+
+      username: ${{ vars.MAIL_USERNAME }}
+      password: ${{ secrets.MAIL_PASSWORD }}
+
+      subject: "❌ Azure Container Apps Deployment Failed"
+
+      to: ${{ vars.MAIL_TO }}
+      from: GitHub Actions
+
+      body: |
+        Deployment failed.
+
+        Workflow URL:
+        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
