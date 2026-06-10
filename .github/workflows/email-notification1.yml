@@ -1,4 +1,4 @@
-name: Build and Push Docker Images with EMAIL Notification
+name: Build and Push Docker Images with EMAIL-Notification
 
 on:
 workflow_dispatch:
@@ -20,7 +20,7 @@ build-and-push:
 runs-on: ubuntu-latest
 environment: dev
 
-```
+
 steps:
   - name: Checkout Source Code
     uses: actions/checkout@v4
@@ -111,7 +111,7 @@ steps:
         ❌ Backend Image Push Failed
 
       to: ${{ vars.MAIL_TO }}
-      from: GitHub Actions
+      from: GitHub Actions 
 
       body: |
         Pipeline Status: FAILED
@@ -273,4 +273,4 @@ steps:
 
         Workflow URL:
         https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-```
+
