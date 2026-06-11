@@ -15,7 +15,7 @@ env:
   REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
 
 jobs:
-  Pull ACR Image and Deploy into Container:
+  Deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
 
