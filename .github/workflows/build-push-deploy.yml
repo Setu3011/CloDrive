@@ -210,10 +210,10 @@ jobs:
         if: steps.frontend_push.outcome == 'failure'
         run: exit 1
 
+  ##--------------DEPLOY AT AZURE CONTAINER APP -------------------##
 
-##--------------DEPLOY AT AZURE CONTAINER APP -------------------##
   deploy:
-    needs: build-and-push 
+    needs: build-and-push
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
 
@@ -236,28 +236,28 @@ jobs:
         if: steps.backend_deploy.outcome == 'failure'
         uses: dawidd6/action-send-mail@v3
         with:
-        server_address: smtp.gmail.com
-        server_port: 465
-        secure: true
-        username: ${{ vars.MAIL_USERNAME }}
-        password: ${{ secrets.MAIL_PASSWORD }}
-        subject: "❌ Backend Azure Container App Deployment Failed"
-        to: ${{ vars.MAIL_TO }}
-        from: GitHub Actions
-        body: |
-          Deployment Status: FAILED
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Backend Azure Container App Deployment Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Deployment Status: FAILED
 
-          Failed Stage:
-          Backend Deployment
+            Failed Stage:
+            Backend Deployment
 
-          Container App:
-          clodrive-backend
+            Container App:
+            clodrive-backend
 
-          Environment:
-          ${{ github.event.inputs.environment }}
+            Environment:
+            ${{ github.event.inputs.environment }}
 
-          Workflow URL:
-          https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Stop Workflow After Backend Deployment Failure
         if: steps.backend_deploy.outcome == 'failure'
@@ -265,7 +265,7 @@ jobs:
 
       - name: Deploy Frontend Container App
         id: frontend_deploy
-        continue-on-error: true 
+        continue-on-error: true
         run: |
           az containerapp update \
             --name clodrive-frontend \
@@ -276,33 +276,32 @@ jobs:
         if: steps.frontend_deploy.outcome == 'failure'
         uses: dawidd6/action-send-mail@v3
         with:
-        server_address: smtp.gmail.com
-        server_port: 465
-        secure: true
-        username: ${{ vars.MAIL_USERNAME }}
-        password: ${{ secrets.MAIL_PASSWORD }}
-        subject: "❌ Frontend Azure Container App Deployment Failed"
-        to: ${{ vars.MAIL_TO }}
-        from: GitHub Actions
-        body: |
-          Deployment Status: FAILED
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Frontend Azure Container App Deployment Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Deployment Status: FAILED
 
-          Failed Stage:
-          Frontend Deployment
+            Failed Stage:
+            Frontend Deployment
 
-          Container App:
-          clodrive-frontend
+            Container App:
+            clodrive-frontend
 
-          Environment:
-          ${{ github.event.inputs.environment }}
+            Environment:
+            ${{ github.event.inputs.environment }}
 
-          Workflow URL:
-          https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Stop Workflow After Frontend Deployment Failure
         if: steps.frontend_deploy.outcome == 'failure'
         run: exit 1
-
 
       - name: Deployment Completed
         run: |
@@ -335,4 +334,3 @@ jobs:
 
             Workflow URL:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
