@@ -1,8 +1,7 @@
 name: Deploy to Azure Container Apps with EMAIL-Notification
 
 on:
-  workflow_run:
-    workflows: ["Build and Push Docker Images with commit id to Azure ACR"]
+  workflow_dispatch:
     inputs:
       environment:
         description: Select Environment
