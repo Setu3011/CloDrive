@@ -210,28 +210,6 @@ jobs:
         if: steps.frontend_push.outcome == 'failure'
         run: exit 1
 
-      - name: Send Success Email
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ vars.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "✅ GitHub Actions ACR Image Build-Push Pipeline SUCCESS"
-          to: ${{ vars.MAIL_TO }}
-          from: GitHub Actions
-          body: |
-            Pipeline Status: SUCCESS
-
-            Repository: ${{ github.repository }}
-
-            Workflow:
-            ${{ github.workflow }}
-
-            Workflow URL:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 ##--------------DEPLOY AT AZURE CONTAINER APP -------------------##
   deploy:
@@ -357,23 +335,4 @@ jobs:
 
             Workflow URL:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Deployment Failure Email
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ vars.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "❌ Azure Container Apps Deployment Failed"
-          to: ${{ vars.MAIL_TO }}
-          from: GitHub Actions
-          body: |
-            Deployment failed.
-
-            Workflow URL:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
 
