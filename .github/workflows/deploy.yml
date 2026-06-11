@@ -1,0 +1,139 @@
+name: Deploy to Azure Container Apps with EMAIL-Notification
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Images with commit id to Azure ACR"]
+    inputs:
+      environment:
+        description: Select Environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Backend Container App
+        id: backend_deploy
+        continue-on-error: true
+        run: |
+          az containerapp update \
+            --name ${{vars.AZURE_CONTAINER_BACKEND}} \
+            --resource-group ${{vars.RESOURCE_GROUP}} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.BACKEND_REPO}}:latest
+
+      - name: Backend Deployment Failure Email
+        if: steps.backend_deploy.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Backend Azure Container App Deployment Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Deployment Status: FAILED
+
+            Failed Stage:
+            Backend Deployment
+
+            Container App:
+            clodrive-backend
+
+            Environment:
+            ${{ github.event.inputs.environment }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Stop Workflow After Backend Deployment Failure
+        if: steps.backend_deploy.outcome == 'failure'
+        run: exit 1
+
+      - name: Deploy Frontend Container App
+        id: frontend_deploy
+        continue-on-error: true
+        run: |
+          az containerapp update \
+            --name ${{vars.AZURE_CONTAINER_FRONTEND}} \
+            --resource-group ${{vars.RESOURCE_GROUP}} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.FRONTEND_REPO}}:latest
+
+      - name: Frontend Deployment Failure Email
+        if: steps.frontend_deploy.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Frontend Azure Container App Deployment Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Deployment Status: FAILED
+
+            Failed Stage:
+            Frontend Deployment
+
+            Container App:
+            clodrive-frontend
+
+            Environment:
+            ${{ github.event.inputs.environment }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Stop Workflow After Frontend Deployment Failure
+        if: steps.frontend_deploy.outcome == 'failure'
+        run: exit 1
+
+      - name: Deployment Completed
+        run: |
+          echo "Backend deployed successfully"
+          echo "Frontend deployed successfully"
+
+      - name: Deployment Success Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "🚀 Azure Container Apps Deployment Successful"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Deployment completed successfully.
+
+            Backend App:
+            clodrive-backend
+
+            Frontend App:
+            clodrive-frontend
+
+            Image Tag:
+            ${{ needs.build-and-push.outputs.sha_short }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
