@@ -11,10 +11,11 @@ on:
           - dev
           - staging
 
+env:
+  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  build-and-push:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
 
