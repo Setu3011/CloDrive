@@ -89,8 +89,8 @@ jobs:
         id: backend_push
         continue-on-error: true
         run: |
-          docker push $REGISTRY/{{$vars.BACKEND_REPO}}:${{ steps.vars.outputs.sha_short }}
-          docker push $REGISTRY/{{$vars.BACKEND_REPO}}:latest
+          docker push $REGISTRY/${{vars.BACKEND_REPO}}:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/${{vars.BACKEND_REPO}}:latest
 
 
       - name: Send Backend Push Failure Email
