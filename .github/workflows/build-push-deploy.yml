@@ -47,16 +47,16 @@ jobs:
         continue-on-error: true
         run: |
           docker build \
-            -t $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }} \
-            -t $REGISTRY/clodrive-backend-3011:latest \
+            -t $REGISTRY/${{vars.BACKEND_REPO}}:${{ steps.vars.outputs.sha_short }} \
+            -t $REGISTRY/${{vars.BACKEND_REPO}}:latest \
             ./backend
 
       - name: Send Backend Build Failure Email
         if: steps.backend_build.outcome == 'failure'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
@@ -89,15 +89,16 @@ jobs:
         id: backend_push
         continue-on-error: true
         run: |
-          docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
-          docker push $REGISTRY/clodrive-backend-3011:latest
+          docker push $REGISTRY/{{$vars.BACKEND_REPO}}:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/{{$vars.BACKEND_REPO}}:latest
+
 
       - name: Send Backend Push Failure Email
         if: steps.backend_push.outcome == 'failure'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
@@ -131,16 +132,16 @@ jobs:
         continue-on-error: true
         run: |
           docker build \
-            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
-            -t $REGISTRY/clodrive-frontend-3011:latest \
+            -t $REGISTRY/${{vars.FRONTEND_REPO}}:${{ steps.vars.outputs.sha_short }} \
+            -t $REGISTRY/${{vars.FRONTEND_REPO}}:latest \
             ./frontend
 
       - name: Send Frontend Build Failure Email
         if: steps.frontend_build.outcome == 'failure'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
@@ -175,15 +176,15 @@ jobs:
         id: frontend_push
         continue-on-error: true
         run: |
-          docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
-          docker push $REGISTRY/clodrive-frontend-3011:latest
+          docker push $REGISTRY/${{vars.FRONTEND_REPO}}:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/${{vars.FRONTEND_REPO}}:latest
 
       - name: Send Frontend Push Failure Email
         if: steps.frontend_push.outcome == 'failure'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
@@ -228,16 +229,16 @@ jobs:
         continue-on-error: true
         run: |
           az containerapp update \
-            --name clodrive-backend \
-            --resource-group azure-resource-group \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/clodrive-backend-3011:${{ needs.build-and-push.outputs.sha_short }}
+            --name ${{vars.AZURE_CONTAINER_BACKEND}} \
+            --resource-group ${{vars.RESOURCE_GROUP}} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.BACKEND_REPO}}:${{ needs.build-and-push.outputs.sha_short }}
 
       - name: Backend Deployment Failure Email
         if: steps.backend_deploy.outcome == 'failure'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
@@ -268,16 +269,16 @@ jobs:
         continue-on-error: true
         run: |
           az containerapp update \
-            --name clodrive-frontend \
-            --resource-group azure-resource-group \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/clodrive-frontend-3011:${{ needs.build-and-push.outputs.sha_short }}
+            --name ${{vars.AZURE_CONTAINER_FRONTEND}} \
+            --resource-group ${{vars.RESOURCE_GROUP}} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.FRONTEND_REPO}}:${{ needs.build-and-push.outputs.sha_short }}
 
       - name: Frontend Deployment Failure Email
         if: steps.frontend_deploy.outcome == 'failure'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
@@ -312,8 +313,8 @@ jobs:
         if: success()
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
@@ -334,3 +335,6 @@ jobs:
 
             Workflow URL:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+
+            
