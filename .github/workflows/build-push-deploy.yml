@@ -13,27 +13,20 @@ on:
 
 env:
   REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
-  RESOURCE_GROUP: azure-resource-group
-  BACKEND_APP: clodrive-backend
-  FRONTEND_APP: clodrive-frontend
 
 jobs:
-
-  # ====================================================
-  # JOB 1 : BUILD & PUSH
-  # ====================================================
   build-and-push:
     runs-on: ubuntu-latest
-    outputs:
-      sha_short: ${{ steps.vars.outputs.sha_short }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Convert SHA to Short SHA
+      # ----------------------------------------
+      # Convert GitHub SHA to Short SHA
+      # ----------------------------------------
+      - name: Convert to Short SHA
         id: vars
-        run: |
-          echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
 
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
@@ -42,11 +35,10 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # ==========================================
-      # Backend Build & Push
-      # ==========================================
+      # ----------------------------------------
+      # Backend Image Build & Push
+      # ----------------------------------------
       - name: Build Backend Image
-        id: backend_build
         run: |
           docker build \
             -t $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }} \
@@ -54,16 +46,14 @@ jobs:
             ./backend
 
       - name: Push Backend Image
-        id: backend_push
         run: |
           docker push $REGISTRY/clodrive-backend-3011:${{ steps.vars.outputs.sha_short }}
           docker push $REGISTRY/clodrive-backend-3011:latest
 
-      # ==========================================
-      # Frontend Build & Push
-      # ==========================================
+      # ----------------------------------------
+      # Frontend Image Build & Push
+      # ----------------------------------------
       - name: Build Frontend Image
-        id: frontend_build
         run: |
           docker build \
             -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
@@ -71,65 +61,17 @@ jobs:
             ./frontend
 
       - name: Push Frontend Image
-        id: frontend_push
         run: |
           docker push $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }}
           docker push $REGISTRY/clodrive-frontend-3011:latest
 
-      - name: Build and Push Completed
+      # ----------------------------------------
+      # Image Pushed Successfully Status
+      # ----------------------------------------
+      - name: Image Pushed Successfully
         run: |
-          echo "Images pushed successfully"
-
-      # ==========================================
-      # SUCCESS EMAIL
-      # ==========================================
-      - name: Send Success Email
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ vars.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "✅ Build & Push Successful"
-          to: ${{ vars.MAIL_TO }}
-          from: GitHub Actions
-          body: |
-            Build and Push completed successfully.
-
-            Repository:
-            ${{ github.repository }}
-
-            Image Tag:
-            ${{ steps.vars.outputs.sha_short }}
-
-            Workflow URL:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      # ==========================================
-      # FAILURE EMAIL
-      # ==========================================
-      - name: Send Failure Email
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ vars.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "❌ Build & Push Failed"
-          to: ${{ vars.MAIL_TO }}
-          from: GitHub Actions
-          body: |
-            Build or Push failed.
-
-            Repository:
-            ${{ github.repository }}
-
-            Workflow URL:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          echo "Frontend images (${{ steps.vars.outputs.sha_short }} & latest) pushed successfully"
+          echo "Backend images (${{ steps.vars.outputs.sha_short }} & latest) pushed successfully"
 
   # ====================================================
   # JOB 2 : DEPLOY TO CONTAINER APPS
