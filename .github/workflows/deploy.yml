@@ -25,6 +25,38 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+         #################################################
+      # Get Latest Backend Commit Tag From ACR
+      #################################################
+
+      - name: Get Latest Backend Tag
+        id: backend_tag
+        run: |
+          TAG=$(az acr repository show-tags \
+            --name "${{ vars.ACR_NAME }}" \
+            --repository "${{ vars.BACKEND_REPO }}" \
+            --orderby time_desc \
+            --output tsv | grep -v "^latest$" | head -1)
+
+          echo "Found Backend Tag: $TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      #################################################
+      # Get Latest Frontend Commit Tag From ACR
+      #################################################
+
+      - name: Get Latest Frontend Tag
+        id: frontend_tag
+        run: |
+          TAG=$(az acr repository show-tags \
+            --name "${{ vars.ACR_NAME }}" \
+            --repository "${{ vars.FRONTEND_REPO }}" \
+            --orderby time_desc \
+            --output tsv | grep -v "^latest$" | head -1)
+
+          echo "Found Frontend Tag: $TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
       - name: Deploy Backend Container App
         id: backend_deploy
         continue-on-error: true
@@ -32,7 +64,7 @@ jobs:
           az containerapp update \
             --name ${{vars.AZURE_CONTAINER_BACKEND}} \
             --resource-group ${{vars.RESOURCE_GROUP}} \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.BACKEND_REPO}}:latest
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_REPO }}:${{ steps.backend_tag.outputs.tag }}
 
       - name: Backend Deployment Failure Email
         if: steps.backend_deploy.outcome == 'failure'
@@ -72,7 +104,7 @@ jobs:
           az containerapp update \
             --name ${{vars.AZURE_CONTAINER_FRONTEND}} \
             --resource-group ${{vars.RESOURCE_GROUP}} \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.FRONTEND_REPO}}:latest
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.FRONTEND_REPO}}:${{ steps.frontend_tag.outputs.tag }}
 
       - name: Frontend Deployment Failure Email
         if: steps.frontend_deploy.outcome == 'failure'
