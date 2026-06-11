@@ -1,5 +1,4 @@
-name: Build, Push and Deploy to Azure Container Apps
-name: Build and Push Docker Images with EMAIL-Notification
+name: Build, Push and Deploy to Azure Container Apps with EMAIL-Notification
 
 on:
   workflow_dispatch:
@@ -19,6 +18,9 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
+
+    outputs:
+      sha_short: ${{ steps.vars.outputs.sha_short }}
 
     steps:
       - name: Checkout Source Code
@@ -61,7 +63,6 @@ jobs:
           subject: "❌ GitHub Actions Backend Image Build Failed"
           to: ${{ vars.MAIL_TO }}
           from: GitHub Actions
-
           body: |
             Pipeline Status: FAILED
 
@@ -69,8 +70,6 @@ jobs:
             Backend Image Build
 
             Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit ID: ${{ github.sha }}
 
             Workflow:
             ${{ github.workflow }}
@@ -105,7 +104,6 @@ jobs:
           subject: "❌ GitHub Actions Backend Image Push Failed"
           to: ${{ vars.MAIL_TO }}
           from: GitHub Actions
-
           body: |
             Pipeline Status: FAILED
 
@@ -113,8 +111,6 @@ jobs:
             Backend Image Push
 
             Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit ID: ${{ github.sha }}
 
             Workflow:
             ${{ github.workflow }}
@@ -135,7 +131,7 @@ jobs:
         continue-on-error: true
         run: |
           docker build \
-            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.output.sha_short }} \
+            -t $REGISTRY/clodrive-frontend-3011:${{ steps.vars.outputs.sha_short }} \
             -t $REGISTRY/clodrive-frontend-3011:latest \
             ./frontend
 
@@ -151,7 +147,6 @@ jobs:
           subject: "❌ GitHub Actions Frontend Image Build Failed"
           to: ${{ vars.MAIL_TO }}
           from: GitHub Actions
-
           body: |
             Pipeline Status: FAILED
 
@@ -195,7 +190,6 @@ jobs:
           subject: "❌ GitHub Actions Frontend Image Push Failed"
           to: ${{ vars.MAIL_TO }}
           from: GitHub Actions
-
           body: |
             Pipeline Status: FAILED
 
@@ -216,10 +210,6 @@ jobs:
         if: steps.frontend_push.outcome == 'failure'
         run: exit 1
 
-      # ====================================================
-      # SUCCESS EMAIL
-      # ====================================================
-
       - name: Send Success Email
         if: success()
         uses: dawidd6/action-send-mail@v3
@@ -232,7 +222,6 @@ jobs:
           subject: "✅ GitHub Actions ACR Image Build-Push Pipeline SUCCESS"
           to: ${{ vars.MAIL_TO }}
           from: GitHub Actions
-
           body: |
             Pipeline Status: SUCCESS
 
@@ -244,47 +233,36 @@ jobs:
             Workflow URL:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-  # ====================================================
-  # JOB 2 : DEPLOY TO CONTAINER APPS
-  # ====================================================
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: dev
+
     steps:
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # ==========================================
-      # Deploy Backend
-      # ==========================================
       - name: Deploy Backend Container App
         run: |
           az containerapp update \
             --name clodrive-backend \
             --resource-group azure-resource-group \
-            --image $REGISTRY/clodrive-backend-3011:${{ needs.build-and-push.outputs.sha_short }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/clodrive-backend-3011:${{ needs.build-and-push.outputs.sha_short }}
 
-      # ==========================================
-      # Deploy Frontend
-      # ==========================================
       - name: Deploy Frontend Container App
         run: |
           az containerapp update \
             --name clodrive-frontend \
             --resource-group azure-resource-group \
-            --image $REGISTRY/clodrive-frontend-3011:${{ needs.build-and-push.outputs.sha_short }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/clodrive-frontend-3011:${{ needs.build-and-push.outputs.sha_short }}
 
       - name: Deployment Completed
         run: |
           echo "Backend deployed successfully"
           echo "Frontend deployed successfully"
 
-      # ==========================================
-      # DEPLOYMENT SUCCESS EMAIL
-      # ==========================================
       - name: Deployment Success Email
         if: success()
         uses: dawidd6/action-send-mail@v3
@@ -312,9 +290,6 @@ jobs:
             Workflow URL:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      # ==========================================
-      # DEPLOYMENT FAILURE EMAIL
-      # ==========================================
       - name: Deployment Failure Email
         if: failure()
         uses: dawidd6/action-send-mail@v3
@@ -332,4 +307,3 @@ jobs:
 
             Workflow URL:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
