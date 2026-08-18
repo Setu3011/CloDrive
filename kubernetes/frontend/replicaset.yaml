@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+
+metadata:
+  name: clodrive-frontend-rs
+  namespace: clodrive
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: clodrive-frontend-rs
+
+  template:
+    metadata:
+      labels:
+        app: clodrive-frontend-rs
+
+    spec:
+      containers:
+        - name: frontend
+          image: setu3011/clodrive-frontend:latest
+
+          ports:
+            - containerPort: 80
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"        
+              
+                   # The resource requests specify the minimum amount of CPU and memory that the container requires to run. In this case, the frontend container requests 100 milliCPU (0.1 CPU) and 128 MiB of memory. This ensures that the container will have access to these resources when scheduled on a node.
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+                    # The resource limits specify the maximum amount of CPU and memory that the container can use. In this case, the frontend container is limited to 500 milliCPU (0.5 CPU) and 512 MiB of memory. If the container exceeds these limits, it may be throttled or terminated by the Kubernetes scheduler.
+                    

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clodrive-backend-service
+  namespace: clodrive
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: clodrive-backend
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 5000                    # The service will listen on port 5000 for incoming HTTP traffic.
+      targetPort: 5000           
+                                  # The service will forward the traffic to port 5000 of the backend pods, which is where the backend application is running.
+
+                                  

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+
+metadata:
+  name: clodrive-backend-rs
+  namespace: clodrive
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: clodrive-backend-rs
+
+  template:
+    metadata:
+      labels:
+        app: clodrive-backend-rs
+
+    spec:
+      containers:
+        - name: backend
+          image: setu3011/clodrive-backend:latest
+
+          ports:
+            - containerPort: 5000        
+            
+               # The backend container exposes port 5000, which is the port on which the backend application listens for incoming requests. This port is used for communication between the frontend and backend services within the Kubernetes cluster.
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+              # The resource limits specify the maximum amount of CPU and memory that the container can use. In this case, the backend container is limited to 500 milliCPU (0.5 CPU) and 512 MiB of memory. If the container exceeds these limits, it may be throttled or terminated by the Kubernetes scheduler. 

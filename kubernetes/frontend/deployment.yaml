@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clodrive-frontend
+  namespace: clodrive
+  labels:
+    app: clodrive-frontend
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: clodrive-frontend
+
+  template:
+    metadata:
+      labels:
+        app: clodrive-frontend
+
+    spec:
+      containers:
+        - name: frontend
+          image: setu3011/clodrive-frontend:latest
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 80
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10        
+            periodSeconds: 10
+                     # The readiness probe is configured to check the root path ("/") of the frontend application on port 80. It will wait for 10 seconds after the container starts before performing the first check, and it will continue to check every 10 seconds thereafter. This ensures that the application is ready to serve traffic before it is added to the service endpoints.
+
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30  
+            periodSeconds: 20
+                           # The liveness probe is configured to check the root path ("/") of the frontend application on port 80. It will wait for 30 seconds after the container starts before performing the first check, and it will continue to check every 20 seconds thereafter. This ensures that the application is running correctly and can be restarted if it becomes unresponsive.
+
+                       
