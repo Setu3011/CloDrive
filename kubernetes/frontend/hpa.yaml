@@ -1,0 +1,53 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+metadata:
+  name: clodrive-frontend-hpa
+  namespace: clodrive
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: clodrive-frontend
+
+  minReplicas: 3
+  maxReplicas: 5
+
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30         # it will wait for 30 seconds before scaling up the pods
+      policies:
+        - type: Percent
+          value: 100                         # it will scale up the pods by 100% of the current number of pods
+          periodSeconds: 60
+
+    scaleDown:
+      stabilizationWindowSeconds: 300        # it will wait for 300 seconds before scaling down the pods
+      policies:
+        - type: Percent
+          value: 50                          # it will scale down the pods by 50% of the current number of pods
+          periodSeconds: 60
+
+  metrics:
+    - type: Resource
+
+      resource:
+        name: cpu
+
+        target:
+          type: Utilization
+          averageUtilization: 70    
+               
+             # it will scale up the pods if the average CPU utilization is above 70% and scale down the pods if the average CPU utilization is below 70%
+
+    - type: Resource
+
+      resource:
+        name: memory
+
+        target:
+          type: Utilization
+          averageUtilization: 80
+    
+             # it will scale up the pods if the average memory utilization is above 80% and scale down the pods if the average memory utilization is below 80%

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clodrive-backend
+  namespace: clodrive
+  labels:
+    app: clodrive-backend
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: clodrive-backend
+
+  template:
+    metadata:
+      labels:
+        app: clodrive-backend
+
+    spec:
+      containers:
+        - name: backend
+          image: setu3011/clodrive-backend:latest
+
+          imagePullPolicy: Always          
+                                
+           # The imagePullPolicy is set to "Always" to ensure that the latest version of the backend image is pulled from the container registry whenever a new pod is created. This helps in keeping the backend application up-to-date with the latest changes and bug fixes.
+
+          ports:
+            - containerPort: 5000   
+            
+            # The backend container will listen for incoming traffic on port 5000. This is the port where the backend application is running and will handle requests from the frontend or other services.
+
+          resources:
+            requests:
+              cpu: "100m"                     
+              memory: "128Mi"
+
+              # The resource requests specify the minimum amount of CPU and memory that the container requires to run. In this case, the backend container requests 100 milliCPU (0.1 CPU) and 128 MiB of memory. This ensures that the container will have access to these resources when scheduled on a node.
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+              # The resource limits specify the maximum amount of CPU and memory that the container can use. In this case, the backend container is limited to 500 milliCPU (0.5 CPU) and 512 MiB of memory. If the container exceeds these limits, it may be throttled or terminated by the Kubernetes scheduler.
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+              # The readiness probe is configured to check the root path ("/") of the backend application on port 5000. It will wait for 15 seconds after the container starts before performing the first check, and it will continue to check every 10 seconds thereafter. This ensures that the application is ready to serve traffic before it is added to the service endpoints.
+ 
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+            # The liveness probe is configured to check the root path ("/") of the backend application on port 5000. It will wait for 30 seconds after the container starts before performing the first check, and it will continue to check every 20 seconds thereafter. This ensures that the application is running correctly and can be restarted if it becomes unresponsive.
+
+            

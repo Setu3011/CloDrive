@@ -1,0 +1,24 @@
+services:
+  backend:
+    image: clodrive-backend-3011:latest
+    container_name: clodrive-backend-container
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    networks:
+      - clodrive-vnet
+ 
+  frontend:
+    image: clodrive-frontend-3011:latest
+    container_name: clodrive-frontend-container
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - clodrive-vnet 
+
+networks:
+  clodrive-vnet:
+    driver: bridge

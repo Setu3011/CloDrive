@@ -1,0 +1,340 @@
+name: Build, Push and Deploy to Azure Container Apps with EMAIL-Notification
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Select Environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+
+env:
+  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    outputs:
+      sha_short: ${{ steps.vars.outputs.sha_short }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Convert to Short SHA
+        id: vars
+        run: |
+          echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # ====================================================
+      # BACKEND BUILD
+      # ====================================================
+
+      - name: Build Backend Image
+        id: backend_build
+        continue-on-error: true
+        run: |
+          docker build \
+            -t $REGISTRY/${{vars.BACKEND_REPO}}:${{ steps.vars.outputs.sha_short }} \
+            -t $REGISTRY/${{vars.BACKEND_REPO}}:latest \
+            ./backend
+
+      - name: Send Backend Build Failure Email
+        if: steps.backend_build.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ GitHub Actions Backend Image Build Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Pipeline Status: FAILED
+
+            Failed Stage:
+            Backend Image Build
+
+            Repository: ${{ github.repository }}
+
+            Workflow:
+            ${{ github.workflow }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Stop Workflow After Backend Build Failure
+        if: steps.backend_build.outcome == 'failure'
+        run: exit 1
+
+      # ====================================================
+      # BACKEND PUSH
+      # ====================================================
+
+      - name: Push Backend Image
+        id: backend_push
+        continue-on-error: true
+        run: |
+          docker push $REGISTRY/${{vars.BACKEND_REPO}}:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/${{vars.BACKEND_REPO}}:latest
+
+
+      - name: Send Backend Push Failure Email
+        if: steps.backend_push.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ GitHub Actions Backend Image Push Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Pipeline Status: FAILED
+
+            Failed Stage:
+            Backend Image Push
+
+            Repository: ${{ github.repository }}
+
+            Workflow:
+            ${{ github.workflow }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Stop Workflow After Backend Push Failure
+        if: steps.backend_push.outcome == 'failure'
+        run: exit 1
+
+      # ====================================================
+      # FRONTEND BUILD
+      # ====================================================
+
+      - name: Build Frontend Image
+        id: frontend_build
+        continue-on-error: true
+        run: |
+          docker build \
+            -t $REGISTRY/${{vars.FRONTEND_REPO}}:${{ steps.vars.outputs.sha_short }} \
+            -t $REGISTRY/${{vars.FRONTEND_REPO}}:latest \
+            ./frontend
+
+      - name: Send Frontend Build Failure Email
+        if: steps.frontend_build.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ GitHub Actions Frontend Image Build Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Pipeline Status: FAILED
+
+            Failed Stage:
+            Frontend Image Build
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit ID: ${{ github.sha }}
+
+            Workflow:
+            ${{ github.workflow }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Stop Workflow After Frontend Build Failure
+        if: steps.frontend_build.outcome == 'failure'
+        run: exit 1
+
+      # ====================================================
+      # FRONTEND PUSH
+      # ====================================================
+
+      - name: Push Frontend Image
+        id: frontend_push
+        continue-on-error: true
+        run: |
+          docker push $REGISTRY/${{vars.FRONTEND_REPO}}:${{ steps.vars.outputs.sha_short }}
+          docker push $REGISTRY/${{vars.FRONTEND_REPO}}:latest
+
+      - name: Send Frontend Push Failure Email
+        if: steps.frontend_push.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ GitHub Actions Frontend Image Push Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Pipeline Status: FAILED
+
+            Failed Stage:
+            Frontend Image Push
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit ID: ${{ github.sha }}
+
+            Workflow:
+            ${{ github.workflow }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Stop Workflow After Frontend Push Failure
+        if: steps.frontend_push.outcome == 'failure'
+        run: exit 1
+
+  ##--------------DEPLOY AT AZURE CONTAINER APP -------------------##
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Backend Container App
+        id: backend_deploy
+        continue-on-error: true
+        run: |
+          az containerapp update \
+            --name ${{vars.AZURE_CONTAINER_BACKEND}} \
+            --resource-group ${{vars.RESOURCE_GROUP}} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.BACKEND_REPO}}:${{ needs.build-and-push.outputs.sha_short }}
+
+      - name: Backend Deployment Failure Email
+        if: steps.backend_deploy.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Backend Azure Container App Deployment Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Deployment Status: FAILED
+
+            Failed Stage:
+            Backend Deployment
+
+            Container App:
+            clodrive-backend
+
+            Environment:
+            ${{ github.event.inputs.environment }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Stop Workflow After Backend Deployment Failure
+        if: steps.backend_deploy.outcome == 'failure'
+        run: exit 1
+
+      - name: Deploy Frontend Container App
+        id: frontend_deploy
+        continue-on-error: true
+        run: |
+          az containerapp update \
+            --name ${{vars.AZURE_CONTAINER_FRONTEND}} \
+            --resource-group ${{vars.RESOURCE_GROUP}} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{vars.FRONTEND_REPO}}:${{ needs.build-and-push.outputs.sha_short }}
+
+      - name: Frontend Deployment Failure Email
+        if: steps.frontend_deploy.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Frontend Azure Container App Deployment Failed"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Deployment Status: FAILED
+
+            Failed Stage:
+            Frontend Deployment
+
+            Container App:
+            clodrive-frontend
+
+            Environment:
+            ${{ github.event.inputs.environment }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Stop Workflow After Frontend Deployment Failure
+        if: steps.frontend_deploy.outcome == 'failure'
+        run: exit 1
+
+      - name: Deployment Completed
+        run: |
+          echo "Backend deployed successfully"
+          echo "Frontend deployed successfully"
+
+      - name: Deployment Success Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{vars.MAIL_SERVER_ADDRESS}}
+          server_port: ${{vars.MAIL_SERVER_PORT}}
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "🚀 Azure Container Apps Deployment Successful"
+          to: ${{ vars.MAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Deployment completed successfully.
+
+            Backend App:
+            clodrive-backend
+
+            Frontend App:
+            clodrive-frontend
+
+            Image Tag:
+            ${{ needs.build-and-push.outputs.sha_short }}
+
+            Workflow URL:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+
+            
